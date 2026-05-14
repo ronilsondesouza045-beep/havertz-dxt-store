@@ -1,11 +1,60 @@
-<div align="center">
+# ⚫🧪 HAVERTZ.DXT — IMVU CRÉDITOS 🧪⚫
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+Sistema premium para venda manual de créditos IMVU, serviços, Free Fire e seguidores, com estética gamer/hacker neon ultra-moderna.
 
-  <h1>Built with AI Studio</h2>
+## 🚀 Tecnologias
+- **Frontend:** React 19, Vite, TailwindCSS 4, Framer Motion
+- **Backend:** Firebase (Auth, Firestore, Storage)
+- **UI:** Componentes customizados com Lucide React e Design System Elite.
+- **Status:** Sistema de entrega manual otimizado para segurança anti-ban.
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## ⚙️ Configurações
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+### 1. Instalação Local
+```bash
+npm install
+npm run dev
+```
 
-</div>
+### 2. Váriaveis de Ambiente (.env)
+Renomeie o arquivo `.env.example` para `.env` e preencha com as credenciais do seu projeto Firebase:
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_PROJECT_ID`
+- ... (veja .env.example)
+
+### 3. Painel Administrativo
+O e-mail principal com acesso total ao painel admin é:
+- **Email Admin:** `ronisouza495@gmail.com`
+- **Email Secundário:** `ronilsondesouza045@gmail.com`
+
+---
+
+## 🔝 Funcionalidades
+- **Catálogo Elite:** Créditos IMVU (Direto/Presente), Produtos MN, Free Fire, Seguidores e Streaming.
+- **Checkout Blindado:** Fluxo de pagamento via Pix com validação manual via Instagram.
+- **Painel do Cliente:** Histórico de pedidos e detalhes da injeção.
+- **Suporte Online:** Chat em tempo real integrado para atendimento direto.
+- **Painel Admin:** Gestão de pedidos, controle de fluxo e chat de suporte centralizado.
+
+---
+
+## 🚀 Como subir para Produção
+
+### GitHub
+1. Crie um repositório no GitHub.
+2. `git init`
+3. `git add .`
+4. `git commit -m "feat: havertz dxt deployment ready"`
+5. `git push origin main`
+
+### Vercel
+1. Conecte sua conta do GitHub na Vercel.
+2. Importe o repositório `havertz-dxt`.
+3. Configure as **Environment Variables** no painel da Vercel (copie do seu .env).
+4. **Build Command:** `npm run build`
+5. **Output Directory:** `dist`
+6. Clique em **Deploy**.
+
+---
+**HAVERTZ.DXT — Rotina limpa. Execução precisa. Resultado inevitável.**
