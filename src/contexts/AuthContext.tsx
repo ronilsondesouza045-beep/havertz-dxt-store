@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await firebaseSignOut(auth);
   };
 
-  const isAdmin = profile?.role === 'admin' || isAdminEmail(user?.email || '');
+  const isAdmin = isAdminEmail(user?.email || '');
 
   return (
     <AuthContext.Provider value={{ user, profile, loading, signOut, isAdmin }}>

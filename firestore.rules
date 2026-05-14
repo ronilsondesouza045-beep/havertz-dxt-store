@@ -11,11 +11,8 @@ service cloud.firestore {
     function isSignedIn() { return request.auth != null; }
     function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
     function isAdmin() { 
-      return isSignedIn() && (
-        (request.auth.token.get('email', '').lower() in ['ronisouza495@gmail.com', 'ronilsondesouza045@gmail.com']) ||
-        (exists(/databases/$(database)/documents/profiles/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.get('role', 'client') == 'admin')
-      );
+      return isSignedIn() && 
+             request.auth.token.get('email', '').lower() == 'havertz.dxt@gmail.com';
     }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
@@ -23,35 +20,35 @@ service cloud.firestore {
 
     // --- Projections ---
     function isValidProfile(data) {
-      return data.id == request.auth.uid &&
-             data.email is string && data.email.size() <= 256 &&
-             data.name is string && data.name.size() <= 128 &&
-             data.role in ['admin', 'client'] &&
-             (data.imvu_nick == null || (data.imvu_nick is string && data.imvu_nick.size() <= 64));
+      return data.get('id', '') == request.auth.uid &&
+             data.get('email', '') is string && data.get('email', '').size() <= 256 &&
+             data.get('name', '') is string && data.get('name', '').size() <= 128 &&
+             data.get('role', '') in ['admin', 'client'] &&
+             (data.get('imvu_nick', null) == null || (data.imvu_nick is string && data.imvu_nick.size() <= 64));
     }
 
     function isValidOrder(data) {
-      return data.user_id is string && data.user_id.size() <= 128 &&
-             data.order_code is string && data.order_code.size() <= 64 &&
-             data.status is string &&
-             data.total_price is number && data.total_price >= 0;
+      return data.get('user_id', '') is string && data.get('user_id', '').size() <= 128 &&
+             data.get('order_code', '') is string && data.get('order_code', '').size() <= 64 &&
+             data.get('status', '') is string &&
+             data.get('total_price', 0) is number && data.get('total_price', 0) >= 0;
     }
 
     function isValidConversation(data) {
-      return data.customer_email is string && data.customer_email.size() <= 256 &&
-             data.status in ['aberta', 'respondida', 'fechada', 'resolvida'];
+      return data.get('customer_email', '') is string && data.get('customer_email', '').size() <= 256 &&
+             data.get('status', '') in ['aberta', 'respondida', 'fechada', 'resolvida'];
     }
 
     function isValidMessage(data) {
-      return (data.conversation_id is string && data.conversation_id.size() <= 128) &&
-             (data.sender_type in ['admin', 'client']) &&
-             (data.message is string && data.message.size() <= 10000);
+      return (data.get('conversation_id', '') is string && data.get('conversation_id', '').size() <= 128) &&
+             (data.get('sender_type', '') in ['admin', 'client']) &&
+             (data.get('message', '') is string && data.get('message', '').size() <= 10000);
     }
 
     // --- Matches ---
 
     match /profiles/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
+      allow get: if isSignedIn() && (isOwner(userId) || isAdmin());
       allow list: if isAdmin();
       allow create: if isOwner(userId) && isValidProfile(incoming());
       allow update: if (isOwner(userId) || isAdmin()) && 
@@ -60,25 +57,40 @@ service cloud.firestore {
     }
 
     match /orders/{orderId} {
-      allow get: if isSignedIn() && (isOwner(existing().user_id) || isAdmin());
-      allow list: if isSignedIn() && (resource.data.user_id == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && isOwner(incoming().user_id) && isValidOrder(incoming());
-      allow update: if isSignedIn() && (isAdmin() || (isOwner(existing().user_id) && (incoming().status == existing().status || incoming().status == 'aguardando comprovante'))) &&
+      allow get: if isSignedIn() && (isOwner(existing().get('user_id', '')) || isAdmin());
+      allow list: if isSignedIn() && (resource.data.get('user_id', '') == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isOwner(incoming().get('user_id', '')) && isValidOrder(incoming());
+      allow update: if isSignedIn() && (isAdmin() || (isOwner(existing().get('user_id', '')) && (incoming().get('status', '') == existing().get('status', '') || incoming().get('status', '') == 'aguardando comprovante'))) &&
                        isValidOrder(incoming()) &&
                        (isAdmin() || incoming().diff(existing()).affectedKeys().hasOnly(['imvu_nick', 'player_id', 'player_nick', 'instagram_handle', 'access_email', 'notes', 'payment_status']));
     }
 
     match /support_conversations/{conversationId} {
-      allow get: if isValidId(conversationId) && (isAdmin() || existing().user_id == null || (isSignedIn() && existing().user_id == request.auth.uid));
-      allow list: if isSignedIn() && (resource.data.user_id == request.auth.uid || isAdmin());
-      allow create: if (isSignedIn() && isOwner(incoming().user_id)) || (!isSignedIn() && incoming().user_id == null);
-      allow update: if isAdmin() || existing().user_id == null || (isSignedIn() && existing().user_id == request.auth.uid);
+      allow get: if isValidId(conversationId) && (
+        isAdmin() || 
+        resource == null || 
+        resource.data.get('user_id', null) == null || 
+        (isSignedIn() && resource.data.get('user_id', null) == request.auth.uid)
+      );
+      allow list: if isSignedIn() && (
+        isAdmin() || 
+        resource.data.get('user_id', null) == request.auth.uid
+      );
+      allow create: if (isSignedIn() && isOwner(incoming().get('user_id', null))) || (!isSignedIn() && incoming().get('user_id', null) == null);
+      allow update: if isAdmin() || existing().get('user_id', null) == null || (isSignedIn() && existing().get('user_id', null) == request.auth.uid);
     }
 
     match /support_conversations/{conversationId}/messages/{messageId} {
-      allow read: if isValidId(conversationId) && (isAdmin() || get(/databases/$(database)/documents/support_conversations/$(conversationId)).data.user_id == null || (isSignedIn() && get(/databases/$(database)/documents/support_conversations/$(conversationId)).data.user_id == request.auth.uid));
-      allow create: if isValidId(conversationId) && (isAdmin() || get(/databases/$(database)/documents/support_conversations/$(conversationId)).data.user_id == null || (isSignedIn() && get(/databases/$(database)/documents/support_conversations/$(conversationId)).data.user_id == request.auth.uid)) &&
-                       isValidMessage(incoming());
+      allow read: if isValidId(conversationId) && (
+        isAdmin() || 
+        get(/databases/$(database)/documents/support_conversations/$(conversationId)).data.get('user_id', null) == null || 
+        (isSignedIn() && get(/databases/$(database)/documents/support_conversations/$(conversationId)).data.get('user_id', null) == request.auth.uid)
+      );
+      allow create: if isValidId(conversationId) && (
+        isAdmin() || 
+        get(/databases/$(database)/documents/support_conversations/$(conversationId)).data.get('user_id', null) == null || 
+        (isSignedIn() && get(/databases/$(database)/documents/support_conversations/$(conversationId)).data.get('user_id', null) == request.auth.uid)
+      ) && isValidMessage(incoming());
     }
 
     match /settings/{settingId} {

@@ -25,8 +25,7 @@ Renomeie o arquivo `.env.example` para `.env` e preencha com as credenciais do s
 
 ### 3. Painel Administrativo
 O e-mail principal com acesso total ao painel admin é:
-- **Email Admin:** `ronisouza495@gmail.com`
-- **Email Secundário:** `ronilsondesouza045@gmail.com`
+- **Email Admin:** `havertz.dxt@gmail.com`
 
 ---
 

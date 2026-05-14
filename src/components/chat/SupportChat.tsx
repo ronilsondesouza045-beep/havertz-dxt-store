@@ -130,9 +130,16 @@ export function SupportChat() {
       if (docSnap.exists()) {
         setConversation({ id: docSnap.id, ...docSnap.data() } as Conversation);
         localStorage.setItem('havertz_chat_conv_id', id);
+      } else {
+        localStorage.removeItem('havertz_chat_conv_id');
       }
-    } catch (err) {
-      console.error('Error loading conversation:', err);
+    } catch (err: any) {
+      if (err.message?.includes('permission') || err.code === 'permission-denied') {
+        localStorage.removeItem('havertz_chat_conv_id');
+        setConversation(null);
+      } else {
+        console.error('Error loading conversation:', err);
+      }
     }
   };
 
