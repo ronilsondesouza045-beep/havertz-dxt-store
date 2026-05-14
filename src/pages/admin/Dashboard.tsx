@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '../../layouts/MainLayout';
 import { useAuth } from '../../contexts/AuthContext';
 import { Card } from '../../components/ui/Card';
-import { supabase } from '../../lib/supabase';
+import { collection, query, orderBy, limit, onSnapshot, getDocs } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 import { Order } from '../../types';
 import { formatCurrency } from '../../lib/utils';
 import { 
@@ -18,6 +19,7 @@ import {
   Eye
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -39,53 +41,59 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchStats() {
-      try {
-        const { data: orders, error } = await supabase
-          .from('orders')
-          .select('*');
+    const ordersRef = collection(db, 'orders');
+    
+    // Recent orders only
+    const recentQuery = query(ordersRef, orderBy('created_at', 'desc'), limit(10));
+    const unsubscribeRecent = onSnapshot(recentQuery, (snapshot) => {
+      const ordersData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Order[];
+      setRecentOrders(ordersData);
+    });
 
-        if (error) throw error;
+    // Statistics (need all orders or a cloud function, but here we'll pull all for simplicity in a dashboard)
+    const fetchAllStats = async () => {
+      try {
+        const snapshot = await getDocs(ordersRef);
+        const orders = snapshot.docs.map(doc => doc.data() as Order);
         
-        if (orders) {
-          // Sort by date for recent orders
-          const sortedOrders = [...orders].sort((a, b) => 
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-          ).slice(0, 10);
-          
-          setRecentOrders(sortedOrders as Order[]);
-          const totalSales = orders.reduce((acc, order) => acc + (order.status !== 'cancelado' ? Number(order.total_price) : 0), 0);
-          const totalK = orders.reduce((acc, order) => acc + (order.status !== 'cancelado' ? (order.amount_k || 0) : 0), 0);
-          const pending = orders.filter(o => {
-            const s = (o.status || '').toLowerCase().replace(/_/g, ' ');
-            return s === 'aguardando pagamento' || s === 'em análise' || s === 'aguardando comprovante';
-          }).length;
-          const delivered = orders.filter(o => (o.status || '').toLowerCase().replace(/_/g, ' ') === 'entregue').length;
-          const cancelled = orders.filter(o => (o.status || '').toLowerCase().replace(/_/g, ' ') === 'cancelado').length;
-          
-          setStats({
-            totalSales,
-            totalOrders: orders.length,
-            pendingOrders: pending,
-            deliveredOrders: delivered,
-            cancelledOrders: cancelled,
-            diretoSales: orders.filter(o => o.product_type === 'DIRETO' && o.status !== 'cancelado').length,
-            presenteSales: orders.filter(o => o.product_type === 'PRESENTE' && o.status !== 'cancelado').length,
-            serviceSales: orders.filter(o => o.product_category === 'service' && o.status !== 'cancelado').length,
-            mnSales: orders.filter(o => o.product_category === 'produto_mn' && o.status !== 'cancelado').length,
-            ffSales: orders.filter(o => o.product_category === 'free_fire' && o.status !== 'cancelado').length,
-            followerSales: orders.filter(o => o.product_category === 'seguidores' && o.status !== 'cancelado').length,
-            totalK
-          });
-        }
-      } catch (err: any) {
-        console.error('Error fetching admin stats:', err);
+        const totalSales = orders.reduce((acc, order) => acc + (order.status !== 'cancelado' ? Number(order.total_price) : 0), 0);
+        const totalK = orders.reduce((acc, order) => acc + (order.status !== 'cancelado' ? (order.amount_k || 0) : 0), 0);
+        const pending = orders.filter(o => {
+          const s = (o.status || '').toLowerCase().replace(/_/g, ' ');
+          return s === 'aguardando pagamento' || s === 'em análise' || s === 'aguardando comprovante';
+        }).length;
+        const delivered = orders.filter(o => (o.status || '').toLowerCase().replace(/_/g, ' ') === 'entregue' || (o.status || '').toLowerCase().replace(/_/g, ' ') === 'concluido').length;
+        const cancelled = orders.filter(o => (o.status || '').toLowerCase().replace(/_/g, ' ') === 'cancelado').length;
+        
+        setStats({
+          totalSales,
+          totalOrders: orders.length,
+          pendingOrders: pending,
+          deliveredOrders: delivered,
+          cancelledOrders: cancelled,
+          diretoSales: orders.filter(o => o.product_type === 'DIRETO' && o.status !== 'cancelado').length,
+          presenteSales: orders.filter(o => o.product_type === 'PRESENTE' && o.status !== 'cancelado').length,
+          serviceSales: orders.filter(o => o.product_category === 'service' && o.status !== 'cancelado').length,
+          mnSales: orders.filter(o => o.product_category === 'produto_mn' && o.status !== 'cancelado').length,
+          ffSales: orders.filter(o => o.product_category === 'free_fire' && o.status !== 'cancelado').length,
+          followerSales: orders.filter(o => o.product_category === 'seguidores' && o.status !== 'cancelado').length,
+          totalK
+        });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.LIST, 'orders');
       } finally {
         setLoading(false);
       }
-    }
+    };
 
-    fetchStats();
+    fetchAllStats();
+
+    return () => {
+      unsubscribeRecent();
+    };
   }, []);
 
   const cardData = [

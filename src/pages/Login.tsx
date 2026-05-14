@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../lib/firebase';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
 import { MainLayout } from '../layouts/MainLayout';
 import { LogIn, Chrome } from 'lucide-react';
 import { isAdminEmail } from '../constants/admins';
+import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -22,11 +25,7 @@ export default function Login() {
     setError(null);
 
     try {
-      const { error: loginError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (loginError) throw loginError;
+      await signInWithEmailAndPassword(auth, email, password);
       navigate('/account');
     } catch (err: any) {
       setError(err.message || 'Erro ao fazer login');
@@ -40,17 +39,28 @@ export default function Login() {
     setError(null);
 
     try {
-      const { error: googleError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin + '/account'
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      if (user) {
+        // Create profile if it doesn't exist (merge: true)
+        const profileData = {
+          id: user.uid,
+          name: user.displayName || '',
+          email: user.email || '',
+          role: isAdminEmail(user.email || '') ? 'admin' : 'client',
+          created_at: new Date().toISOString()
+        };
+
+        try {
+          await setDoc(doc(db, 'profiles', user.uid), profileData, { merge: true });
+        } catch (err) {
+          handleFirestoreError(err, OperationType.WRITE, `profiles/${user.uid}`);
         }
-      });
-      if (googleError) throw googleError;
-      
-      // Note: With Supabase OAuth, the user is redirected away and back.
-      // Profile creation should be handled by a Supabase trigger (best practice)
-      // or check on AuthContext. But since this is a migration, we'll rely on our current flow.
+      }
+
+      navigate('/account');
     } catch (err: any) {
       setError(err.message || 'Erro ao entrar com Google');
     } finally {

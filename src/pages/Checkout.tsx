@@ -6,7 +6,8 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
 import { Modal } from '../components/ui/Modal';
-import { supabase } from '../lib/supabase';
+import { doc, getDoc, setDoc, addDoc, collection, query, where, getDocs, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { PRODUCTS_DIRETO, PRODUCTS_PRESENTE } from '../constants/products';
 import { SERVICES_UPGRADES, FOLLOWERS_IMVU_BASIC, FOLLOWERS_INSTAGRAM_BASIC, STREAMING_SERVICES } from '../constants/services';
@@ -16,6 +17,7 @@ import { FOLLOWERS_INSTAGRAM, FOLLOWERS_IMVU_FULL } from '../constants/followers
 import { formatCurrency, generateOrderCode } from '../lib/utils';
 import { Copy, Check, ShieldCheck, MessageCircle, User, Radio, ExternalLink, ListChecks } from 'lucide-react';
 import { InfoNotice } from '../components/ui/InfoNotice';
+import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
 
 export default function Checkout() {
   const [searchParams] = useSearchParams();
@@ -64,13 +66,10 @@ export default function Checkout() {
     
     const fetchSettings = async () => {
       try {
-        const { data, error } = await supabase
-          .from('settings')
-          .select('*')
-          .eq('id', 1)
-          .single();
-        if (data) {
-          setSettings(data);
+        const settingsRef = doc(db, 'settings', 'global');
+        const docSnap = await getDoc(settingsRef);
+        if (docSnap.exists()) {
+          setSettings(docSnap.data());
         }
       } catch (error) {
         console.error('Error fetching settings:', error);
@@ -133,10 +132,10 @@ export default function Checkout() {
           mainFieldValue = formData.imvu_nick || formData.player_id || formData.instagram_handle || formData.access_email || 'N/A';
       }
 
-      // 1. Create order in Supabase
+      // 1. Create order in Firestore
       const orderData = {
         order_code: orderCode,
-        user_id: user.id,
+        user_id: user.uid,
         customer_name: profile?.name || user.email || 'Cliente',
         customer_email: user.email || '',
         imvu_nick: formData.imvu_nick || '',
@@ -148,56 +147,46 @@ export default function Checkout() {
         updated_at: new Date().toISOString()
       };
 
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert(orderData)
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
+      let orderId = '';
+      try {
+        const orderRef = await addDoc(collection(db, 'orders'), orderData);
+        orderId = orderRef.id;
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, 'orders');
+      }
 
       // 2. Integration with Support Chat
       try {
-        const { data: convs, error: convError } = await supabase
-          .from('support_conversations')
-          .select('id')
-          .eq('customer_email', user.email)
-          .single();
+        const q = query(collection(db, 'support_conversations'), where('customer_email', '==', user.email));
+        const querySnapshot = await getDocs(q);
         
         let conversationId = '';
         const supportSubject = `Pedido #${orderCode} — aguardando comprovante`;
         
-        if (convs) {
-          conversationId = convs.id;
-          await supabase
-            .from('support_conversations')
-            .update({
-              subject: supportSubject,
-              order_id: order.id,
-              order_code: orderCode,
-              last_message: 'Pedido criado. Aguardando envio do comprovante pelo cliente.',
-              updated_at: new Date().toISOString(),
-              status: 'aberta'
-            })
-            .eq('id', conversationId);
+        if (!querySnapshot.empty) {
+          const convDoc = querySnapshot.docs[0];
+          conversationId = convDoc.id;
+          await updateDoc(doc(db, 'support_conversations', conversationId), {
+            subject: supportSubject,
+            order_id: orderId,
+            order_code: orderCode,
+            last_message: 'Pedido criado. Aguardando envio do comprovante pelo cliente.',
+            updated_at: new Date().toISOString(),
+            status: 'aberta'
+          });
         } else {
-          const { data: newConv, error: newConvError } = await supabase
-            .from('support_conversations')
-            .insert({
-              user_id: user.id,
-              order_id: order.id,
-              order_code: orderCode,
-              customer_name: profile?.name || user.email || 'Cliente',
-              customer_email: user.email || '',
-              subject: supportSubject,
-              status: 'aberta',
-              last_message: 'Pedido criado. Aguardando envio do comprovante pelo cliente.',
-              updated_at: new Date().toISOString()
-            })
-            .select()
-            .single();
-          
-          if (newConv) conversationId = newConv.id;
+          const newConvRef = await addDoc(collection(db, 'support_conversations'), {
+            user_id: user.uid,
+            order_id: orderId,
+            order_code: orderCode,
+            customer_name: profile?.name || user.email || 'Cliente',
+            customer_email: user.email || '',
+            subject: supportSubject,
+            status: 'aberta',
+            last_message: 'Pedido criado. Aguardando envio do comprovante pelo cliente.',
+            updated_at: new Date().toISOString()
+          });
+          conversationId = newConvRef.id;
         }
 
         if (conversationId) {
@@ -219,15 +208,14 @@ Agora envie o comprovante do Pix pelo Instagram oficial informando o número do 
 
 Instagram: @havertz.dxt`;
 
-          await supabase
-            .from('support_messages')
-            .insert({
-              conversation_id: conversationId,
-              sender_type: 'admin',
-              sender_id: 'system',
-              message: supportMsg,
-              read: false
-            });
+          await addDoc(collection(db, `support_conversations/${conversationId}/messages`), {
+            conversation_id: conversationId,
+            sender_type: 'admin',
+            sender_id: 'system',
+            message: supportMsg,
+            read: false,
+            created_at: new Date().toISOString()
+          });
         }
 
       } catch (supportErr) {

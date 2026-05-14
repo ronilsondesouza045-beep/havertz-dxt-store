@@ -4,18 +4,21 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { supabase } from '../../lib/supabase';
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 import { MessageCircle, Clock, CheckCircle2, ChevronRight, HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { format } from 'date-fns';
+import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
 
 interface Conversation {
   id: string;
   customer_name: string;
   subject: string;
-  status: 'aberta' | 'respondida' | 'fechada';
+  status: 'aberta' | 'respondida' | 'fechada' | 'resolvida';
   last_message: string;
-  updated_at: string;
-  created_at: string;
+  updated_at: any;
+  created_at: any;
 }
 
 export default function AccountSupport() {
@@ -26,41 +29,31 @@ export default function AccountSupport() {
   useEffect(() => {
     if (!user) return;
 
-    const fetchConversations = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('support_conversations')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('updated_at', { ascending: false });
+    const convsRef = collection(db, 'support_conversations');
+    const q = query(
+      convsRef, 
+      where('user_id', '==', user.uid),
+      orderBy('updated_at', 'desc')
+    );
 
-        if (error) throw error;
-        setConversations(data as Conversation[]);
-      } catch (err: any) {
-        console.error('Error fetching conversations:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const convsData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          updated_at: data.updated_at?.toDate?.()?.toISOString() || new Date().toISOString(),
+          created_at: data.created_at?.toDate?.()?.toISOString() || new Date().toISOString(),
+        };
+      }) as Conversation[];
+      setConversations(convsData);
+      setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'support_conversations');
+      setLoading(false);
+    });
 
-    fetchConversations();
-
-    // Basic real-time subscription
-    const subscription = supabase
-      .channel('support_conversations_changes')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'support_conversations',
-        filter: `user_id=eq.${user.id}`
-      }, (payload) => {
-        fetchConversations();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(subscription);
-    };
+    return () => unsubscribe();
   }, [user]);
 
   const getStatusColor = (status: Conversation['status']) => {
@@ -70,6 +63,10 @@ export default function AccountSupport() {
       case 'resolvida': return 'green';
       default: return 'gray';
     }
+  };
+
+  const handleTyping = () => {
+    // Optional: Implement typing indicator with Firestore if needed
   };
 
   return (

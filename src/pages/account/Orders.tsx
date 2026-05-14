@@ -4,12 +4,14 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { supabase } from '../../lib/supabase';
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 import { Order } from '../../types';
 import { formatCurrency } from '../../lib/utils';
 import { Package, Clock, Hash, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
 
 export default function UserOrders() {
   const { user } = useAuth();
@@ -19,24 +21,26 @@ export default function UserOrders() {
   useEffect(() => {
     if (!user) return;
 
-    const fetchOrders = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('orders')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
+    const ordersRef = collection(db, 'orders');
+    const q = query(
+      ordersRef,
+      where('user_id', '==', user.uid),
+      orderBy('created_at', 'desc')
+    );
 
-        if (error) throw error;
-        setOrders(data as Order[]);
-      } catch (err: any) {
-        console.error('Error fetching orders:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const ordersData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Order[];
+      setOrders(ordersData);
+      setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'orders');
+      setLoading(false);
+    });
 
-    fetchOrders();
+    return () => unsubscribe();
   }, [user]);
 
   const getStatusColor = (status: Order['status']) => {

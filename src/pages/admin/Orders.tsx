@@ -6,12 +6,14 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
-import { supabase } from '../../lib/supabase';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 import { Order } from '../../types';
 import { formatCurrency } from '../../lib/utils';
 import { Trash2, Eye, CheckCircle2, XCircle, Search, Filter, X, Copy, Package, Clock, User, Mail, Hash, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
+import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
 
 export default function AdminOrders() {
   const { user, isAdmin: authIsAdmin } = useAuth();
@@ -34,46 +36,36 @@ export default function AdminOrders() {
     }
   }, [orderIdFromUrl]);
 
-  // Stable data fetching
-  const fetchOrders = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data, error: fetchError } = await supabase
-        .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (fetchError) throw fetchError;
-      setOrders((data || []) as Order[]);
-    } catch (err: any) {
-      console.error("Error fetching orders:", err);
-      setError("Erro ao carregar pedidos. Verifique sua conexão.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchOrders();
+    const ordersRef = collection(db, 'orders');
+    const q = query(ordersRef, orderBy('created_at', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const ordersData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Order[];
+      setOrders(ordersData);
+      setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'orders');
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const handleUpdateStatus = async (orderId: string, updates: Partial<Order>) => {
     setUpdateLoading(orderId);
     try {
-      const { error: updateError } = await supabase
-        .from('orders')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', orderId);
-
-      if (updateError) throw updateError;
-      await fetchOrders();
+      const orderRef = doc(db, 'orders', orderId);
+      await updateDoc(orderRef, {
+        ...updates,
+        updated_at: new Date().toISOString()
+      });
+      toast.success('Pedido atualizado');
     } catch (err: any) {
-      console.error('Error updating order:', err);
-      alert('Erro ao atualizar pedido');
+      handleFirestoreError(err, OperationType.UPDATE, `orders/${orderId}`);
     } finally {
       setUpdateLoading(null);
     }
@@ -84,21 +76,11 @@ export default function AdminOrders() {
     
     setUpdateLoading(orderId);
     try {
-      const { error: deleteError } = await supabase
-        .from('orders')
-        .delete()
-        .eq('id', orderId);
-
-      if (deleteError) throw deleteError;
-      
-      // Update local state immediately
-      setOrders(prev => prev.filter(o => o.id !== orderId));
+      await deleteDoc(doc(db, 'orders', orderId));
       if (selectedOrderId === orderId) setSelectedOrderId(null);
-      
       toast.success('Pedido excluído com sucesso.');
     } catch (err: any) {
-      console.error("Error deleting order:", err);
-      toast.error('Erro ao excluir pedido');
+      handleFirestoreError(err, OperationType.DELETE, `orders/${orderId}`);
     } finally {
       setUpdateLoading(null);
     }
@@ -219,7 +201,7 @@ export default function AdminOrders() {
                   <tr>
                     <td colSpan={7} className="px-6 py-20 text-center">
                       <p className="text-red-500 italic font-bold mb-4">{error}</p>
-                      <Button onClick={() => fetchOrders()} variant="outline" size="sm" className="border-zinc-800">
+                      <Button onClick={() => window.location.reload()} variant="outline" size="sm" className="border-zinc-800">
                         Tentar Novamente
                       </Button>
                     </td>

@@ -4,8 +4,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { supabase } from '../../lib/supabase';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 import { User, Shield, AtSign, Save } from 'lucide-react';
+import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
 
 export default function AccountProfile() {
   const { user, profile } = useAuth();
@@ -35,21 +37,17 @@ export default function AccountProfile() {
     setSuccess(false);
 
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          name: formData.name,
-          imvu_nick: formData.imvu_nick,
-          whatsapp: formData.whatsapp,
-        })
-        .eq('id', user.id);
-
-      if (error) throw error;
+      const profileRef = doc(db, 'profiles', user.uid);
+      await updateDoc(profileRef, {
+        name: formData.name,
+        imvu_nick: formData.imvu_nick,
+        whatsapp: formData.whatsapp,
+      });
 
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
-      console.error('Error updating profile:', err);
+      handleFirestoreError(err, OperationType.UPDATE, `profiles/${user.uid}`);
     } finally {
       setLoading(false);
     }

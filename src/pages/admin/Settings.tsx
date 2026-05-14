@@ -3,9 +3,11 @@ import { MainLayout } from '../../layouts/MainLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { supabase } from '../../lib/supabase';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 import { Settings } from '../../types';
 import { Save, AlertCircle, ShoppingBag, MessageSquare, Landmark } from 'lucide-react';
+import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
 
 export default function AdminSettings() {
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -19,17 +21,28 @@ export default function AdminSettings() {
 
   async function fetchSettings() {
     try {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('*')
-        .eq('id', 1)
-        .single();
+      const settingsRef = doc(db, 'settings', 'config');
+      const snapshot = await getDoc(settingsRef);
         
-      if (data) {
-        setSettings(data as Settings);
+      if (snapshot.exists()) {
+        setSettings(snapshot.data() as Settings);
+      } else {
+        // Initialize if not exists
+        const initialSettings: Partial<Settings> = {
+          pix_key: '',
+          pix_name: '',
+          whatsapp: '',
+          instagram_official: '',
+          whatsapp_official: '',
+          proof_instructions: '',
+          store_notice: '',
+          store_open: true
+        };
+        await setDoc(settingsRef, initialSettings);
+        setSettings(initialSettings as Settings);
       }
     } catch (error) {
-      console.error('Error fetching settings:', error);
+      handleFirestoreError(error, OperationType.GET, 'settings/config');
     } finally {
       setLoading(false);
     }
@@ -43,7 +56,8 @@ export default function AdminSettings() {
     setSuccess(false);
 
     try {
-      const settingsData = {
+      const settingsRef = doc(db, 'settings', 'config');
+      await updateDoc(settingsRef, {
         pix_key: settings.pix_key,
         pix_name: settings.pix_name,
         whatsapp: settings.whatsapp,
@@ -52,20 +66,13 @@ export default function AdminSettings() {
         proof_instructions: settings.proof_instructions || '',
         store_notice: settings.store_notice,
         store_open: settings.store_open,
-        updated_at: new Date().toISOString()
-      };
-      
-      const { error } = await supabase
-        .from('settings')
-        .update(settingsData)
-        .eq('id', 1);
-
-      if (error) throw error;
+        updated_at: serverTimestamp()
+      });
 
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
-      console.error('Error updating settings:', err);
+      handleFirestoreError(err, OperationType.UPDATE, 'settings/config');
     } finally {
       setSaveLoading(false);
     }

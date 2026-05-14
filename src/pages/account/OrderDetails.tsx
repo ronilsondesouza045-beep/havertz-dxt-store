@@ -5,12 +5,14 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { supabase } from '../../lib/supabase';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 import { Order } from '../../types';
 import { formatCurrency } from '../../lib/utils';
 import { ArrowLeft, Clock, Package, MessageCircle, AlertCircle, ShieldCheck, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { InfoBadgeRow, NoticeSection } from '../../components/ui/InfoSection';
+import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
 
 export default function OrderDetails() {
   const { id } = useParams<{ id: string }>();
@@ -24,22 +26,18 @@ export default function OrderDetails() {
 
     const fetchOrder = async () => {
       try {
-        const { data, error } = await supabase
-          .from('orders')
-          .select('*')
-          .eq('id', id)
-          .single();
+        const orderRef = doc(db, 'orders', id);
+        const snapshot = await getDoc(orderRef);
 
-        if (error) throw error;
-        
-        if (data) {
-          // Verify ownership (or admin status)
-          if (data.user_id === user.id) {
-            setOrder(data as Order);
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          // Verify ownership
+          if (data.user_id === user.uid) {
+            setOrder({ id: snapshot.id, ...data } as Order);
           }
         }
       } catch (err: any) {
-        console.error('Error fetching order details:', err);
+        handleFirestoreError(err, OperationType.GET, `orders/${id}`);
       } finally {
         setLoading(false);
       }

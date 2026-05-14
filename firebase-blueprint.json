@@ -1,0 +1,99 @@
+{
+  "entities": {
+    "Profile": {
+      "title": "User Profile",
+      "description": "Stores user profile information and roles.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The user's authentication UID." },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "imvu_nick": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "client"] },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email", "role"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Represents a customer order for products or services.",
+      "type": "object",
+      "properties": {
+        "order_code": { "type": "string" },
+        "user_id": { "type": "string" },
+        "customer_name": { "type": "string" },
+        "customer_email": { "type": "string", "format": "email" },
+        "imvu_nick": { "type": "string" },
+        "product_type": { "type": "string" },
+        "amount_k": { "type": "number" },
+        "total_price": { "type": "number" },
+        "status": { "type": "string", "enum": ["aguardando pagamento", "em processamento", "concluido", "cancelado"] },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["order_code", "user_id", "status"]
+    },
+    "SupportConversation": {
+      "title": "Support Conversation",
+      "description": "A support ticket or chat thread between a user and admin.",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "order_id": { "type": "string" },
+        "order_code": { "type": "string" },
+        "customer_name": { "type": "string" },
+        "customer_email": { "type": "string", "format": "email" },
+        "subject": { "type": "string" },
+        "status": { "type": "string", "enum": ["aberta", "fechada", "pendente"] },
+        "last_message": { "type": "string" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["customer_email", "status"]
+    },
+    "SupportMessage": {
+      "title": "Support Message",
+      "description": "An individual message within a support conversation.",
+      "type": "object",
+      "properties": {
+        "conversation_id": { "type": "string" },
+        "sender_type": { "type": "string", "enum": ["admin", "client"] },
+        "sender_id": { "type": "string" },
+        "message": { "type": "string" },
+        "read": { "type": "boolean" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["conversation_id", "sender_type", "message"]
+    },
+    "Setting": {
+      "title": "Setting",
+      "description": "Global application settings (mostly for admin).",
+      "type": "object",
+      "properties": {
+        "pix_key": { "type": "string" },
+        "merchant_name": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/profiles/{userId}": {
+      "schema": "Profile",
+      "description": "User profiles keyed by UID."
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Orders collection."
+    },
+    "/support_conversations/{conversationId}": {
+      "schema": "SupportConversation",
+      "description": "Support chat threads."
+    },
+    "/support_conversations/{conversationId}/messages/{messageId}": {
+      "schema": "SupportMessage",
+      "description": "Messages within a conversation."
+    },
+    "/settings/{settingId}": {
+      "schema": "Setting",
+      "description": "Global settings."
+    }
+  }
+}

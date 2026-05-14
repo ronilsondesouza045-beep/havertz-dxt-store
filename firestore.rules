@@ -1,136 +1,86 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Global Safety Net
+    // 0. Default Deny
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Helpers
-    function isSignedIn() {
-      return request.auth != null;
+    // --- Helpers ---
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isAdmin() { 
+      return isSignedIn() && get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role == 'admin'; 
     }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function isAdmin() {
-      return isSignedIn() && (
-        request.auth.token.get('email', '').lower() == 'ronisouza495@gmail.com' ||
-        request.auth.token.get('email', '').lower() == 'ronilsondesouza045@gmail.com' ||
-        request.auth.uid == 'ig9erpfOAbPLg2aELSbz0MRSYQ53' ||
-        (exists(/databases/$(database)/documents/profiles/$(request.auth.uid)) && 
-         get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role == 'admin')
-      );
-    }
-
-    function isConversationOwner(convData) {
-      return (!('user_id' in convData) || convData.user_id == null || convData.user_id == "") || (isSignedIn() && convData.user_id == request.auth.uid);
-    }
-
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
-    function incoming() {
-      return request.resource.data;
-    }
-
-    function existing() {
-      return resource.data;
-    }
-
-    // Validation Blueprints
+    // --- Projections ---
     function isValidProfile(data) {
-      return data.keys().hasAll(['id', 'name', 'email', 'role', 'created_at', 'imvu_nick']) &&
-             data.keys().size() <= 8 &&
-             data.id == request.auth.uid &&
-             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
-             data.email is string && data.email.size() > 0 && data.email.size() <= 100 &&
-             data.imvu_nick is string && data.imvu_nick.size() <= 50 &&
+      return data.id == request.auth.uid &&
+             data.email is string && data.email.size() <= 256 &&
+             data.name is string && data.name.size() <= 128 &&
              data.role in ['admin', 'client'] &&
-             data.created_at is string; 
+             (data.imvu_nick is string && data.imvu_nick.size() <= 64);
     }
 
     function isValidOrder(data) {
-      return data.keys().hasAll([
-        'id', 'order_code', 'user_id', 'customer_name', 'customer_email', 
-        'product_type', 'product_name', 'product_category', 'total_price', 
-        'status', 'payment_method', 'payment_status', 'created_at', 'updated_at'
-      ]) &&
-             data.keys().size() <= 40 &&
-             (data.user_id == request.auth.uid || isAdmin()) &&
-             data.status in ['aguardando comprovante', 'aguardando pagamento', 'em análise', 'pagamento confirmado', 'em entrega', 'entregue', 'cancelado'] &&
-             data.total_price is number &&
-             (!('proof_image_url' in data) || data.proof_image_url == null || data.proof_image_url is string) &&
-             (!('proof_verification_status' in data) || data.proof_verification_status == null || data.proof_verification_status in ['validado', 'pendente_verificacao_manual', 'rejeitado']);
-    }
-
-    function isValidSettings(data) {
-      return data.keys().hasAll(['pix_key', 'pix_name', 'whatsapp', 'store_notice', 'store_open', 'updated_at']) &&
-             data.keys().size() <= 10;
+      return data.user_id is string && data.user_id.size() <= 128 &&
+             data.order_code is string && data.order_code.size() <= 32 &&
+             data.status in ['aguardando pagamento', 'em processamento', 'concluido', 'cancelado'] &&
+             data.total_price is number && data.total_price >= 0;
     }
 
     function isValidConversation(data) {
-      return data.keys().hasAll(['customer_name', 'customer_email', 'status', 'created_at', 'updated_at']) &&
-             data.keys().size() <= 15 &&
-             data.customer_name is string && data.customer_name.size() <= 100 &&
-             data.customer_email is string && data.customer_email.size() <= 100 &&
-             data.status in ['aberta', 'respondida', 'aguardando cliente', 'resolvida', 'fechada'];
+      return data.customer_email is string && data.customer_email.size() <= 256 &&
+             data.status in ['aberta', 'fechada', 'pendente'];
     }
 
     function isValidMessage(data) {
-      return data.keys().hasAll(['conversation_id', 'sender_type', 'sender_id', 'message', 'read', 'created_at']) &&
-             data.keys().size() <= 12 &&
-             data.sender_type in ['client', 'admin'] &&
-             data.message is string && data.message.size() <= 20000;
+      return data.conversation_id is string && data.conversation_id.size() <= 128 &&
+             data.sender_type in ['admin', 'client'] &&
+             data.message is string && data.message.size() <= 10000;
     }
 
-    // Collections
-    match /profiles/{profileId} {
-      allow get: if isSignedIn() && (isOwner(profileId) || isAdmin());
+    // --- Matches ---
+
+    match /profiles/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
-      allow create: if isSignedIn() && isValidProfile(incoming()) && isOwner(profileId) && (
-        incoming().role == 'client' || 
-        request.auth.token.get('email', '').lower() == 'ronisouza495@gmail.com' ||
-        request.auth.token.get('email', '').lower() == 'ronilsondesouza045@gmail.com'
-      );
-      allow update: if isSignedIn() && (
-        isAdmin() || 
-        (isOwner(profileId) && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'imvu_nick', 'whatsapp']) && incoming().role == existing().role)
-      ) && isValidProfile(incoming());
+      allow create: if isOwner(userId) && isValidProfile(incoming());
+      allow update: if (isOwner(userId) || isAdmin()) && 
+                       isValidProfile(incoming()) &&
+                       (isAdmin() || incoming().diff(existing()).affectedKeys().hasOnly(['name', 'imvu_nick']));
     }
 
     match /orders/{orderId} {
       allow get: if isSignedIn() && (isOwner(existing().user_id) || isAdmin());
-      allow list: if isSignedIn() && (isAdmin() || (resource.data.user_id == request.auth.uid));
-      allow create: if isSignedIn() && isValidOrder(incoming());
-      allow update: if isSignedIn() && (
-        isAdmin() || 
-        (isOwner(existing().user_id) && (existing().status == 'aguardando comprovante' || existing().status == 'aguardando pagamento') && incoming().diff(existing()).affectedKeys().hasOnly(['proof_image_url', 'status', 'payment_status', 'updated_at', 'proof_file_name', 'proof_verification_status', 'proof_verification_reason', 'customer_instagram', 'customer_whatsapp']))
-      ) && isValidOrder(incoming());
-      allow delete: if isAdmin();
-    }
-
-    match /settings/config {
-      allow read: if true; 
-      allow write: if isAdmin() && isValidSettings(incoming());
+      allow list: if isSignedIn() && (resource.data.user_id == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isOwner(incoming().user_id) && isValidOrder(incoming());
+      allow update: if isSignedIn() && (isAdmin() || (isOwner(existing().user_id) && incoming().status == existing().status)) &&
+                       isValidOrder(incoming()) &&
+                       (isAdmin() || incoming().diff(existing()).affectedKeys().hasOnly(['imvu_nick']));
     }
 
     match /support_conversations/{conversationId} {
-      allow get: if isAdmin() || isConversationOwner(existing()); 
-      allow list: if isAdmin() || (isSignedIn() && resource.data.user_id == request.auth.uid);
-      allow create: if isValidConversation(incoming());
-      allow update: if (isAdmin() || isConversationOwner(existing())) && isValidConversation(incoming());
-      allow delete: if isAdmin();
+      allow get: if isSignedIn() && (isOwner(existing().user_id) || isAdmin());
+      allow list: if isSignedIn() && (resource.data.user_id == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isOwner(incoming().user_id) && isValidConversation(incoming());
+      allow update: if isSignedIn() && (isOwner(existing().user_id) || isAdmin()) &&
+                       isValidConversation(incoming());
+    }
 
-      match /messages/{messageId} {
-        allow read: if isAdmin() || isConversationOwner(get(/databases/$(database)/documents/support_conversations/$(conversationId)).data);
-        allow create: if (isAdmin() || isConversationOwner(get(/databases/$(database)/documents/support_conversations/$(conversationId)).data)) && isValidMessage(incoming());
-        allow update: if isAdmin(); 
-        allow delete: if isAdmin();
-      }
+    match /support_conversations/{conversationId}/messages/{messageId} {
+      allow read: if isSignedIn() && (isOwner(get(/databases/$(database)/documents/support_conversations/$(conversationId)).data.user_id) || isAdmin());
+      allow create: if isSignedIn() && (isOwner(get(/databases/$(database)/documents/support_conversations/$(conversationId)).data.user_id) || isAdmin()) &&
+                       isValidMessage(incoming());
+    }
+
+    match /settings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
   }
 }

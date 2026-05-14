@@ -1,8 +1,10 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { User, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { auth, db } from '../lib/firebase';
 import { Profile } from '../types';
 import { isAdminEmail } from '../constants/admins';
+import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
 
 interface AuthContextType {
   user: User | null;
@@ -20,23 +22,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Initial session check
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const activeUser = session?.user ?? null;
+    const unsubscribeAuth = onAuthStateChanged(auth, async (activeUser) => {
       setUser(activeUser);
+      
       if (activeUser) {
-        fetchProfile(activeUser.id);
-      } else {
-        setLoading(false);
-      }
-    });
+        // Use onSnapshot for real-time profile updates
+        const profileRef = doc(db, 'profiles', activeUser.uid);
+        const unsubscribeProfile = onSnapshot(profileRef, (docSnap) => {
+          if (docSnap.exists()) {
+            setProfile(docSnap.data() as Profile);
+          } else {
+            setProfile(null);
+          }
+          setLoading(false);
+        }, (error) => {
+          handleFirestoreError(error, OperationType.GET, `profiles/${activeUser.uid}`);
+          setLoading(false);
+        });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const activeUser = session?.user ?? null;
-      setUser(activeUser);
-      if (activeUser) {
-        await fetchProfile(activeUser.id);
+        return () => {
+          unsubscribeProfile();
+        };
       } else {
         setProfile(null);
         setLoading(false);
@@ -44,35 +50,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => {
-      subscription.unsubscribe();
+      unsubscribeAuth();
     };
   }, []);
 
-  async function fetchProfile(userId: string) {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        if (error.code !== 'PGRST116') {
-          console.error('Error fetching profile:', error);
-        }
-        setProfile(null);
-      } else {
-        setProfile(data as Profile);
-      }
-    } catch (err) {
-      console.error('Unexpected error in fetchProfile:', err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await firebaseSignOut(auth);
   };
 
   const isAdmin = profile?.role === 'admin' || isAdminEmail(user?.email || '');

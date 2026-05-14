@@ -13,9 +13,13 @@ import {
   Eye,
   ExternalLink
 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { doc, setDoc, addDoc, collection, query, orderBy, onSnapshot, updateDoc, getDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, auth, storage } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
+import { format } from 'date-fns';
+import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
 
 interface Message {
   id: string;
@@ -55,6 +59,7 @@ export function SupportChat() {
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     name: profile?.name || '',
     email: profile?.email || '',
@@ -84,51 +89,41 @@ export function SupportChat() {
 
   useEffect(() => {
     if (conversation && isOpen) {
-      const fetchMsgs = async () => {
-        try {
-          const { data, error } = await supabase
-            .from('support_messages')
-            .select('*')
-            .eq('conversation_id', conversation.id)
-            .order('created_at', { ascending: true });
+      const messagesRef = collection(db, 'support_conversations', conversation.id, 'messages');
+      const q = query(messagesRef, orderBy('created_at', 'asc'));
 
-          if (error) throw error;
-          setMessages(data as Message[]);
-          scrollToBottom();
-        } catch (err) {
-          console.error('Error fetching messages:', err);
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const msgs = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Message[];
+        setMessages(msgs);
+        scrollToBottom();
+      }, (error) => {
+        handleFirestoreError(error, OperationType.GET, `support_conversations/${conversation.id}/messages`);
+      });
+
+      // Also listen for conversation updates (typing, status)
+      const convRef = doc(db, 'support_conversations', conversation.id);
+      const unsubscribeConv = onSnapshot(convRef, (docSnap) => {
+        if (docSnap.exists()) {
+          setConversation({ id: docSnap.id, ...docSnap.data() } as Conversation);
         }
-      };
-
-      fetchMsgs();
-
-      const subscription = supabase
-        .channel(`chat_${conversation.id}`)
-        .on('postgres_changes', { 
-          event: '*', 
-          schema: 'public', 
-          table: 'support_messages',
-          filter: `conversation_id=eq.${conversation.id}`
-        }, () => {
-          fetchMsgs();
-        })
-        .subscribe();
+      });
 
       return () => {
-        supabase.removeChannel(subscription);
+        unsubscribe();
+        unsubscribeConv();
       };
     }
   }, [conversation?.id, isOpen]);
 
   const loadConversation = async (id: string) => {
     try {
-      const { data, error } = await supabase
-        .from('support_conversations')
-        .select('*')
-        .eq('id', id)
-        .single();
-      if (data) {
-        setConversation(data as Conversation);
+      const convRef = doc(db, 'support_conversations', id);
+      const docSnap = await getDoc(convRef);
+      if (docSnap.exists()) {
+        setConversation({ id: docSnap.id, ...docSnap.data() } as Conversation);
         localStorage.setItem('havertz_chat_conv_id', id);
       }
     } catch (err) {
@@ -148,36 +143,37 @@ export function SupportChat() {
     e.preventDefault();
     setIsStarting(true);
     try {
-      const { data: newConv, error: convError } = await supabase
-        .from('support_conversations')
-        .insert({
-          user_id: user?.id,
-          customer_name: formData.name,
-          customer_email: formData.email,
-          subject: formData.subject || 'Atendimento via Site',
-          status: 'aberta',
-          last_message: 'Atendimento iniciado'
-        })
-        .select()
-        .single();
+      const newConvData = {
+        user_id: user?.uid || null,
+        customer_name: formData.name,
+        customer_email: formData.email,
+        subject: formData.subject || 'Atendimento via Site',
+        status: 'aberta',
+        last_message: 'Atendimento iniciado',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
 
-      if (convError) throw convError;
+      const newConvRef = await addDoc(collection(db, 'support_conversations'), newConvData);
       
-      if (newConv) {
-        setConversation(newConv as Conversation);
-        localStorage.setItem('havertz_chat_conv_id', newConv.id);
+      const newConv = { id: newConvRef.id, ...newConvData } as Conversation;
+      setConversation(newConv);
+      localStorage.setItem('havertz_chat_conv_id', newConv.id);
 
-        await supabase
-          .from('support_messages')
-          .insert({
-            conversation_id: newConv.id,
-            sender_type: 'client',
-            sender_id: user?.id || 'anonymous',
-            message: formData.subject || 'Preciso de ajuda',
-            read: false
-          });
-      }
-    } catch (err) { console.error(err); } finally { setIsStarting(false); }
+      await addDoc(collection(db, 'support_conversations', newConv.id, 'messages'), {
+        conversation_id: newConv.id,
+        sender_type: 'client',
+        sender_id: user?.uid || 'anonymous',
+        message: formData.subject || 'Preciso de ajuda',
+        read: false,
+        created_at: new Date().toISOString()
+      });
+      
+    } catch (err) { 
+      console.error(err); 
+    } finally { 
+      setIsStarting(false); 
+    }
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -189,24 +185,20 @@ export function SupportChat() {
     setIsLoading(true);
 
     try {
-      await supabase
-        .from('support_messages')
-        .insert({
-          conversation_id: conversation.id,
-          sender_type: 'client',
-          sender_id: user?.id || 'anonymous',
-          message: msgText,
-          read: false
-        });
+      await addDoc(collection(db, 'support_conversations', conversation.id, 'messages'), {
+        conversation_id: conversation.id,
+        sender_type: 'client',
+        sender_id: user?.uid || 'anonymous',
+        message: msgText,
+        read: false,
+        created_at: new Date().toISOString()
+      });
       
-      await supabase
-        .from('support_conversations')
-        .update({
-          last_message: msgText,
-          updated_at: new Date().toISOString(),
-          status: 'aberta'
-        })
-        .eq('id', conversation.id);
+      await updateDoc(doc(db, 'support_conversations', conversation.id), {
+        last_message: msgText,
+        updated_at: new Date().toISOString(),
+        status: 'aberta'
+      });
       
       scrollToBottom();
     } catch (err) { 
@@ -214,6 +206,42 @@ export function SupportChat() {
     } finally { 
       setIsLoading(false); 
     }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !conversation) return;
+
+    setUploading(true);
+    try {
+      const storageRef = ref(storage, `support/${conversation.id}/${Date.now()}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+
+      await addDoc(collection(db, 'support_conversations', conversation.id, 'messages'), {
+        conversation_id: conversation.id,
+        sender_type: 'client',
+        sender_id: user?.uid || 'anonymous',
+        message: 'Anexo enviado',
+        image_url: url,
+        read: false,
+        created_at: new Date().toISOString()
+      });
+
+      await updateDoc(doc(db, 'support_conversations', conversation.id), {
+        last_message: 'Anexo enviado',
+        updated_at: new Date().toISOString()
+      });
+
+    } catch (err) {
+      console.error("Erro ao enviar imagem:", err);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleTyping = () => {
+    // Implement typing indicator logic if needed
   };
 
   return (

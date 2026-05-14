@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, updateProfile } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../lib/firebase';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
 import { MainLayout } from '../layouts/MainLayout';
 import { UserPlus, Chrome } from 'lucide-react';
 import { isAdminEmail } from '../constants/admins';
+import { handleFirestoreError, OperationType } from '../lib/firestoreErrors';
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -27,31 +30,28 @@ export default function Register() {
 
     try {
       // 1. Sign up user
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            full_name: formData.name,
-          }
-        }
-      });
-      
-      if (signUpError) throw signUpError;
-      const user = data.user;
+      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+      const user = userCredential.user;
 
       if (user) {
-        // 2. Create profile entry in Supabase Table
-        const { error: profileError } = await supabase.from('profiles').insert({
-          id: user.id,
+        // Update display name
+        await updateProfile(user, { displayName: formData.name });
+
+        // 2. Create profile entry in Firestore
+        const profileData = {
+          id: user.uid,
           name: formData.name,
           email: formData.email,
           imvu_nick: formData.imvu_nick,
           role: isAdminEmail(formData.email) ? 'admin' : 'client',
           created_at: new Date().toISOString()
-        });
-        
-        if (profileError) throw profileError;
+        };
+
+        try {
+          await setDoc(doc(db, 'profiles', user.uid), profileData);
+        } catch (err) {
+          handleFirestoreError(err, OperationType.WRITE, `profiles/${user.uid}`);
+        }
       }
 
       navigate('/account');
@@ -67,13 +67,29 @@ export default function Register() {
     setError(null);
 
     try {
-      const { error: googleError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin + '/account'
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      if (user) {
+        // Check if profile exists, if not create it
+        const profileData = {
+          id: user.uid,
+          name: user.displayName || '',
+          email: user.email || '',
+          imvu_nick: '', // Initially empty for Google login
+          role: isAdminEmail(user.email || '') ? 'admin' : 'client',
+          created_at: new Date().toISOString()
+        };
+
+        try {
+          await setDoc(doc(db, 'profiles', user.uid), profileData, { merge: true });
+        } catch (err) {
+          handleFirestoreError(err, OperationType.WRITE, `profiles/${user.uid}`);
         }
-      });
-      if (googleError) throw googleError;
+      }
+
+      navigate('/account');
     } catch (err: any) {
       setError(err.message || 'Erro ao entrar com Google');
     } finally {

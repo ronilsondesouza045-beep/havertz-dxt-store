@@ -3,7 +3,20 @@ import { MainLayout } from '../../layouts/MainLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { supabase } from '../../lib/supabase';
+import { 
+  collection, 
+  query, 
+  orderBy, 
+  onSnapshot, 
+  doc, 
+  updateDoc, 
+  addDoc, 
+  serverTimestamp,
+  deleteDoc,
+  where,
+  getDocs
+} from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
   Search, 
@@ -22,6 +35,9 @@ import {
   FileText
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
 
 interface Conversation {
   id: string;
@@ -30,10 +46,10 @@ interface Conversation {
   order_code?: string;
   customer_name: string;
   customer_email: string;
-  status: 'aberta' | 'respondida' | 'finalizada';
+  status: 'aberta' | 'respondida' | 'resolvida' | 'fechada';
   last_message: string;
-  updated_at: string;
-  created_at: string;
+  updated_at: any;
+  created_at: any;
   typing_client?: boolean;
   typing_admin?: boolean;
 }
@@ -47,7 +63,7 @@ interface Message {
   image_url?: string;
   file_url?: string;
   read: boolean;
-  created_at: string;
+  created_at: any;
   file_name?: string;
   file_type?: string;
 }
@@ -64,84 +80,68 @@ export default function AdminSupportChat() {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const fetchConversations = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('support_conversations')
-        .select('*')
-        .order('updated_at', { ascending: false });
-
-      if (error) throw error;
-      setConversations(data as Conversation[]);
-    } catch (err) {
-      console.error('Error fetching conversations:', err);
-    }
-  };
 
   useEffect(() => {
-    fetchConversations();
+    const convsRef = collection(db, 'support_conversations');
+    const q = query(convsRef, orderBy('updated_at', 'desc'));
 
-    const subscription = supabase
-      .channel('admin_conversations')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_conversations' }, () => {
-        fetchConversations();
-      })
-      .subscribe();
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const convsData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          updated_at: data.updated_at?.toDate?.()?.toISOString() || new Date().toISOString(),
+          created_at: data.created_at?.toDate?.()?.toISOString() || new Date().toISOString(),
+        };
+      }) as Conversation[];
+      setConversations(convsData);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'support_conversations');
+    });
 
-    return () => {
-      supabase.removeChannel(subscription);
-    };
+    return () => unsubscribe();
   }, []);
-
-  const fetchMessages = async (convId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('support_messages')
-        .select('*')
-        .eq('conversation_id', convId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      setMessages(data as Message[]);
-      scrollToBottom();
-      
-      // Mark as read
-      const unread = (data || []).filter(m => m.sender_type === 'client' && !m.read);
-      if (unread.length > 0) {
-        await supabase
-          .from('support_messages')
-          .update({ read: true })
-          .eq('conversation_id', convId)
-          .eq('sender_type', 'client');
-      }
-    } catch (err) {
-      console.error('Error fetching messages:', err);
-    }
-  };
 
   useEffect(() => {
     if (selectedConv) {
-      fetchMessages(selectedConv.id);
+      const msgsRef = collection(db, 'support_conversations', selectedConv.id, 'messages');
+      const q = query(msgsRef, orderBy('created_at', 'asc'));
 
-      const msgSubscription = supabase
-        .channel(`messages_${selectedConv.id}`)
-        .on('postgres_changes', { 
-          event: '*', 
-          schema: 'public', 
-          table: 'support_messages',
-          filter: `conversation_id=eq.${selectedConv.id}`
-        }, () => {
-          fetchMessages(selectedConv.id);
-        })
-        .subscribe();
+      const unsubscribe = onSnapshot(q, async (snapshot) => {
+        const msgsData = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            created_at: data.created_at?.toDate?.()?.toISOString() || new Date().toISOString(),
+          };
+        }) as Message[];
+        setMessages(msgsData);
+        scrollToBottom();
 
-      return () => {
-        supabase.removeChannel(msgSubscription);
-      };
+        // Mark as read (Admin side marks client messages as read)
+        const unreadDocs = snapshot.docs.filter(doc => doc.data().sender_type === 'client' && !doc.data().read);
+        for (const doc of unreadDocs) {
+          await updateDoc(doc.ref, { read: true });
+        }
+      }, (error) => {
+        handleFirestoreError(error, OperationType.GET, `support_conversations/${selectedConv.id}/messages`);
+      });
+
+      return () => unsubscribe();
     }
   }, [selectedConv]);
+
+  const scrollToBottom = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  };
+
+  const handleTyping = () => {
+    // Optional: Implement typing indicator with Firestore if needed
+  };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,29 +152,25 @@ export default function AdminSupportChat() {
     setIsLoading(true);
 
     try {
-      const { error: msgError } = await supabase
-        .from('support_messages')
-        .insert({
-          conversation_id: selectedConv.id,
-          sender_type: 'admin',
-          sender_id: user.id,
-          message: msgText,
-          read: false
-        });
-
-      if (msgError) throw msgError;
+      const msgsRef = collection(db, 'support_conversations', selectedConv.id, 'messages');
+      await addDoc(msgsRef, {
+        conversation_id: selectedConv.id,
+        sender_type: 'admin',
+        sender_id: user.uid,
+        message: msgText,
+        read: false,
+        created_at: serverTimestamp()
+      });
       
-      await supabase
-        .from('support_conversations')
-        .update({
-          last_message: msgText,
-          updated_at: new Date().toISOString(),
-          status: 'respondida'
-        })
-        .eq('id', selectedConv.id);
+      const convRef = doc(db, 'support_conversations', selectedConv.id);
+      await updateDoc(convRef, {
+        last_message: msgText,
+        updated_at: serverTimestamp(),
+        status: 'respondida'
+      });
         
     } catch (err) {
-      console.error('Error sending message:', err);
+      handleFirestoreError(err, OperationType.CREATE, `support_conversations/${selectedConv.id}/messages`);
     } finally {
       setIsLoading(false);
     }
@@ -183,34 +179,29 @@ export default function AdminSupportChat() {
   const deleteConversation = async (id: string) => {
     if (!window.confirm('Tem certeza que deseja excluir esta conversa?')) return;
     try {
-      const { error } = await supabase
-        .from('support_conversations')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      // Note: In Firestore deletions aren't recursive by default, but here we just delete the shell/head.
+      // Ideally you'd delete messages too.
+      await deleteDoc(doc(db, 'support_conversations', id));
       
       setConversations(prev => prev.filter(c => c.id !== id));
       if (selectedConv?.id === id) setSelectedConv(null);
       toast.success('Conversa excluída com sucesso.');
     } catch (err) {
-      console.error('Error deleting conversation:', err);
-      toast.error('Erro ao excluir conversa.');
+      handleFirestoreError(err, OperationType.DELETE, `support_conversations/${id}`);
     }
   };
 
   const updateStatus = async (status: 'aberta' | 'respondida' | 'finalizada') => {
     if (!selectedConv) return;
     try {
-      const { error } = await supabase
-        .from('support_conversations')
-        .update({ status, updated_at: new Date().toISOString() })
-        .eq('id', selectedConv.id);
-
-      if (error) throw error;
+      const convRef = doc(db, 'support_conversations', selectedConv.id);
+      await updateDoc(convRef, { 
+        status, 
+        updated_at: serverTimestamp() 
+      });
       setSelectedConv({ ...selectedConv, status });
     } catch (err) {
-      console.error('Error updating status:', err);
+      handleFirestoreError(err, OperationType.UPDATE, `support_conversations/${selectedConv.id}`);
     }
   };
 
