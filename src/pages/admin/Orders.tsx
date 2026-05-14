@@ -455,7 +455,7 @@ export default function AdminOrders() {
                           onClick={() => handleDeleteOrder(selectedOrder.id)}
                           isLoading={updateLoading === selectedOrderId}
                         >
-                          Excluir Totalmente
+                          Excluir Pedido
                         </Button>
                       )}
                     </div>
