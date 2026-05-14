@@ -38,7 +38,12 @@ export default function AdminOrders() {
 
   useEffect(() => {
     const ordersRef = collection(db, 'orders');
-    const q = query(ordersRef, orderBy('created_at', 'desc'));
+    // Soft delete filter: clients can remove orders from their view and admin view
+    const q = query(
+      ordersRef, 
+      where('is_deleted', '==', false),
+      orderBy('created_at', 'desc')
+    );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const ordersData = snapshot.docs.map(doc => ({

@@ -4,19 +4,22 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Order } from '../../types';
 import { formatCurrency, safeDate } from '../../lib/utils';
-import { Package, Clock, Hash, ChevronRight } from 'lucide-react';
+import { Package, Clock, Hash, ChevronRight, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
+import { Modal } from '../../components/ui/Modal';
 
 export default function UserOrders() {
   const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingOrder, setDeletingOrder] = useState<Order | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -25,6 +28,7 @@ export default function UserOrders() {
     const q = query(
       ordersRef,
       where('user_id', '==', user.uid),
+      where('is_deleted', '==', false),
       orderBy('created_at', 'desc')
     );
 
@@ -51,6 +55,28 @@ export default function UserOrders() {
       case 'em análise': return 'info';
       case 'pagamento confirmado': return 'neon';
       default: return 'default';
+    }
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!deletingOrder) return;
+    
+    setIsDeleting(true);
+    try {
+      const orderRef = doc(db, 'orders', deletingOrder.id);
+      await updateDoc(orderRef, {
+        is_deleted: true,
+        deleted_by: 'client',
+        deleted_at: new Date().toISOString(),
+        status: 'removido pelo cliente',
+        payment_status: 'cancelado pelo cliente',
+        updated_at: new Date().toISOString()
+      });
+      setDeletingOrder(null);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `orders/${deletingOrder.id}`);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -129,11 +155,21 @@ export default function UserOrders() {
                        <div className="bg-zinc-950 p-6 flex flex-col justify-between items-end w-full sm:w-64 border-t sm:border-t-0 sm:border-l border-zinc-900 gap-4">
                           <div className="flex flex-col items-end w-full">
                              <span className="text-2xl font-black text-white italic">{formatCurrency(order.total_price)}</span>
-                             <Link to={`/account/orders/${order.id}`}>
-                                <Button variant="ghost" size="sm" className="text-[10px] h-8 hover:text-neon-green uppercase font-black px-0">
-                                   Ver Detalhes <ChevronRight size={12} className="ml-1" />
+                             <div className="flex items-center gap-4">
+                                <Link to={`/account/orders/${order.id}`}>
+                                   <Button variant="ghost" size="sm" className="text-[10px] h-8 hover:text-neon-green uppercase font-black px-0">
+                                      Ver Detalhes <ChevronRight size={12} className="ml-1" />
+                                   </Button>
+                                </Link>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="text-[10px] h-8 text-zinc-600 hover:text-red-500 uppercase font-black px-0"
+                                  onClick={() => setDeletingOrder(order)}
+                                >
+                                   <Trash2 size={12} className="mr-1" /> Excluir
                                 </Button>
-                             </Link>
+                             </div>
                           </div>
 
                           {order.status === 'aguardando comprovante' && (
@@ -155,6 +191,48 @@ export default function UserOrders() {
           )}
         </div>
       </div>
+
+      <Modal
+        isOpen={!!deletingOrder}
+        onClose={() => setDeletingOrder(null)}
+        title="Excluir Pedido 🗑️"
+      >
+        <div className="space-y-6">
+          <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
+             <p className="text-red-400 text-sm font-medium">
+                Tem certeza que deseja excluir este pedido? Ele será removido do seu histórico e não aparecerá mais para o administrador.
+             </p>
+          </div>
+          <div className="space-y-3">
+             <div className="flex justify-between text-xs">
+                <span className="text-zinc-500 uppercase font-bold tracking-widest">Código</span>
+                <span className="text-white font-mono">{deletingOrder?.order_code}</span>
+             </div>
+             <div className="flex justify-between text-xs">
+                <span className="text-zinc-500 uppercase font-bold tracking-widest">Valor</span>
+                <span className="text-white font-mono">{formatCurrency(deletingOrder?.total_price || 0)}</span>
+             </div>
+          </div>
+          <div className="flex flex-col gap-3 pt-4">
+             <Button 
+               variant="error" 
+               className="w-full font-black italic uppercase"
+               onClick={handleDeleteOrder}
+               loading={isDeleting}
+             >
+                Sim, excluir permanentemente
+             </Button>
+             <Button 
+               variant="ghost" 
+               className="w-full font-black italic uppercase"
+               onClick={() => setDeletingOrder(null)}
+               disabled={isDeleting}
+             >
+                Cancelar
+             </Button>
+          </div>
+        </div>
+      </Modal>
     </MainLayout>
   );
 }

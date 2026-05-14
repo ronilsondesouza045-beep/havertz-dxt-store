@@ -442,8 +442,17 @@ Instagram: @havertz.dxt`;
                 
                 <div className="space-y-6">
                   <div className="flex items-center gap-4">
-                    <div className="h-16 w-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-neon-green p-2 shadow-inner">
-                       {product.category === 'credits' ? <User size={24} /> : <Radio size={24} />}
+                    <div className="h-20 w-20 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-neon-green p-1 shadow-inner overflow-hidden">
+                       {product.image_url ? (
+                         <img 
+                           src={product.image_url} 
+                           alt={product.name} 
+                           className="h-full w-full object-cover rounded-xl"
+                           referrerPolicy="no-referrer"
+                         />
+                       ) : (
+                         product.category === 'credits' ? <User size={24} /> : <Radio size={24} />
+                       )}
                     </div>
                     <div>
                       <p className="text-white font-black text-base uppercase italic leading-none">{product.name}</p>

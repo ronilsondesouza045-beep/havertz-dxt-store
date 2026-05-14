@@ -22,5 +22,6 @@ export const PRODUCTS_PRESENTE: Product[] = amounts.map(amount => ({
   price: amount * PRICE_PRESENTE_PER_K,
   type: 'PRESENTE',
   category: 'credits',
+  image_url: 'https://cdn.ggmax.com.br/images/ed8e2aedf73abb51943c86aa4f28ed7a.sm.jpg',
   requirements: { imvu_nick: true }
 }));

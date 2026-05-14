@@ -116,17 +116,47 @@ export default function Store() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.05 }}
             >
-              <Card className="group hover:border-zinc-700 bg-zinc-950 relative overflow-hidden">
+              <Card className="group hover:border-zinc-700 bg-zinc-950 relative overflow-hidden transition-all duration-300">
+                 {/* Background decoration */}
                  <div className={`absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover:scale-125 transition-transform duration-500 ${tab === 'DIRETO' ? 'text-neon-green' : 'text-neon-purple'}`}>
                    {tab === 'DIRETO' ? <Zap size={80} /> : <Gift size={80} />}
                  </div>
+
+                 {product.image_url && (
+                   <div className="absolute top-0 right-0 w-40 h-40 opacity-20 group-hover:opacity-40 transition-all duration-500 pointer-events-none grayscale group-hover:grayscale-0 scale-110 group-hover:scale-100">
+                     <img 
+                       src={product.image_url} 
+                       alt="" 
+                       className="w-full h-full object-cover rounded-bl-[4rem] border-l border-b border-white/5"
+                       referrerPolicy="no-referrer"
+                     />
+                   </div>
+                 )}
                  
                  <div className="relative z-10">
                    <div className="flex justify-between items-start mb-4">
-                     <h3 className="text-3xl font-black text-white italic">{product.amount_k}K</h3>
-                     <Badge variant={tab === 'DIRETO' ? 'neon' : 'info'}>SALE</Badge>
+                     <div className="flex flex-col gap-1">
+                        <Badge variant={tab === 'DIRETO' ? 'neon' : 'info'} className="w-fit">SALE</Badge>
+                        <h3 className="text-4xl font-black text-white italic tracking-tighter">{product.amount_k}K</h3>
+                     </div>
                    </div>
-                   <p className="text-zinc-500 text-xs uppercase font-bold tracking-widest mb-6">IMVU Credits — {tab}</p>
+                   
+                   <div className="flex items-center gap-3 mb-6">
+                     {product.image_url && (
+                       <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl border-2 border-zinc-800 bg-zinc-900 group-hover:border-neon-purple transition-all duration-300 shadow-xl group-hover:shadow-neon-purple/20">
+                         <img 
+                           src={product.image_url} 
+                           alt={product.name}
+                           className="h-full w-full object-cover"
+                           referrerPolicy="no-referrer"
+                         />
+                       </div>
+                     )}
+                     <div>
+                        <p className="text-zinc-500 text-[10px] uppercase font-black tracking-[0.2em]">IMVU Credits</p>
+                        <p className={`text-xs font-bold uppercase ${tab === 'DIRETO' ? 'text-neon-green' : 'text-neon-purple'}`}>{tab}</p>
+                     </div>
+                   </div>
                    
                    <div className="flex items-center justify-between mt-auto pt-6 border-t border-zinc-900">
                      <div className="flex flex-col">

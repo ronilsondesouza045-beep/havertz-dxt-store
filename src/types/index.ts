@@ -43,8 +43,11 @@ export interface Order {
   proof_file_name?: string;
   proof_verification_status?: ReceiptVerificationStatus;
   proof_verification_reason?: string;
-  status: 'aguardando comprovante' | 'aguardando pagamento' | 'em análise' | 'pagamento confirmado' | 'em entrega' | 'entregue' | 'cancelado';
+  status: 'aguardando comprovante' | 'aguardando pagamento' | 'em análise' | 'pagamento confirmado' | 'em entrega' | 'entregue' | 'cancelado' | 'removido pelo cliente';
   admin_note?: string;
+  is_deleted?: boolean;
+  deleted_by?: 'client' | 'admin';
+  deleted_at?: string;
   created_at: string;
   updated_at: string;
 }
@@ -70,6 +73,7 @@ export interface Product {
   type?: 'DIRETO' | 'PRESENTE' | string;
   amount_k?: number;
   description?: string;
+  image_url?: string;
   requirements?: {
     imvu_nick?: boolean;
     whatsapp?: boolean;

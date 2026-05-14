@@ -31,8 +31,8 @@ export default function OrderDetails() {
 
         if (snapshot.exists()) {
           const data = snapshot.data();
-          // Verify ownership
-          if (data.user_id === user.uid) {
+          // Verify ownership and soft-delete state
+          if (data.user_id === user.uid && data.is_deleted !== true) {
             setOrder({ id: snapshot.id, ...data } as Order);
           }
         }

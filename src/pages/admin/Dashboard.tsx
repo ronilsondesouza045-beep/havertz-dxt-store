@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '../../layouts/MainLayout';
 import { useAuth } from '../../contexts/AuthContext';
 import { Card } from '../../components/ui/Card';
-import { collection, query, orderBy, limit, onSnapshot, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, onSnapshot, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Order } from '../../types';
 import { formatCurrency, safeDate } from '../../lib/utils';
@@ -43,8 +43,13 @@ export default function AdminDashboard() {
   useEffect(() => {
     const ordersRef = collection(db, 'orders');
     
-    // Recent orders only
-    const recentQuery = query(ordersRef, orderBy('created_at', 'desc'), limit(10));
+    // Recent orders only (including is_deleted filter)
+    const recentQuery = query(
+      ordersRef, 
+      where('is_deleted', '==', false),
+      orderBy('created_at', 'desc'), 
+      limit(10)
+    );
     const unsubscribeRecent = onSnapshot(recentQuery, (snapshot) => {
       const ordersData = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -56,7 +61,8 @@ export default function AdminDashboard() {
     // Statistics (need all orders or a cloud function, but here we'll pull all for simplicity in a dashboard)
     const fetchAllStats = async () => {
       try {
-        const snapshot = await getDocs(ordersRef);
+        const q = query(ordersRef, where('is_deleted', '==', false));
+        const snapshot = await getDocs(q);
         const orders = snapshot.docs.map(doc => doc.data() as Order);
         
         const totalSales = orders.reduce((acc, order) => acc + (order.status !== 'cancelado' ? Number(order.total_price) : 0), 0);
