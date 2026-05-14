@@ -13,13 +13,14 @@ import {
   Eye,
   ExternalLink
 } from 'lucide-react';
-import { doc, setDoc, addDoc, collection, query, orderBy, onSnapshot, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, addDoc, collection, query, orderBy, onSnapshot, updateDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, auth, storage } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
 import { format } from 'date-fns';
 import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
+import { safeDate } from '../../lib/utils';
 
 interface Message {
   id: string;
@@ -93,10 +94,14 @@ export function SupportChat() {
       const q = query(messagesRef, orderBy('created_at', 'asc'));
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
-        const msgs = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Message[];
+        const msgs = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            created_at: safeDate(data.created_at).toISOString()
+          };
+        }) as Message[];
         setMessages(msgs);
         scrollToBottom();
       }, (error) => {
@@ -150,8 +155,8 @@ export function SupportChat() {
         subject: formData.subject || 'Atendimento via Site',
         status: 'aberta',
         last_message: 'Atendimento iniciado',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: serverTimestamp(),
+        updated_at: serverTimestamp()
       };
 
       const newConvRef = await addDoc(collection(db, 'support_conversations'), newConvData);
@@ -166,7 +171,7 @@ export function SupportChat() {
         sender_id: user?.uid || 'anonymous',
         message: formData.subject || 'Preciso de ajuda',
         read: false,
-        created_at: new Date().toISOString()
+        created_at: serverTimestamp()
       });
       
     } catch (err) { 
@@ -191,12 +196,12 @@ export function SupportChat() {
         sender_id: user?.uid || 'anonymous',
         message: msgText,
         read: false,
-        created_at: new Date().toISOString()
+        created_at: serverTimestamp()
       });
       
       await updateDoc(doc(db, 'support_conversations', conversation.id), {
         last_message: msgText,
-        updated_at: new Date().toISOString(),
+        updated_at: serverTimestamp(),
         status: 'aberta'
       });
       
@@ -225,12 +230,12 @@ export function SupportChat() {
         message: 'Anexo enviado',
         image_url: url,
         read: false,
-        created_at: new Date().toISOString()
+        created_at: serverTimestamp()
       });
 
       await updateDoc(doc(db, 'support_conversations', conversation.id), {
         last_message: 'Anexo enviado',
-        updated_at: new Date().toISOString()
+        updated_at: serverTimestamp()
       });
 
     } catch (err) {
@@ -345,7 +350,7 @@ export function SupportChat() {
                           )}
                           <p className="leading-relaxed font-medium">{msg.message}</p>
                           <div className="flex items-center gap-1.5 mt-2 justify-end opacity-40 text-[9px] font-black italic">
-                            {msg.created_at && format(new Date(msg.created_at), 'HH:mm')}
+                            {msg.created_at && format(safeDate(msg.created_at), 'HH:mm')}
                             {msg.sender_type === 'client' && (msg.read ? <CheckCheck size={11} className="text-[#00ff66]" /> : <Check size={11} />)}
                           </div>
                         </div>

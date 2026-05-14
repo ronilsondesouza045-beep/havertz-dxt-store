@@ -8,7 +8,7 @@ import { Badge } from '../../components/ui/Badge';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Order } from '../../types';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, safeDate } from '../../lib/utils';
 import { ArrowLeft, Clock, Package, MessageCircle, AlertCircle, ShieldCheck, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { InfoBadgeRow, NoticeSection } from '../../components/ui/InfoSection';
@@ -77,7 +77,7 @@ export default function OrderDetails() {
                          {order.status}
                       </Badge>
                    </div>
-                   <p className="text-xs text-zinc-600 font-mono font-bold">Solicitado em {new Date(order.created_at).toLocaleString('pt-BR')}</p>
+                   <p className="text-xs text-zinc-600 font-mono font-bold">Solicitado em {safeDate(order.created_at).toLocaleString('pt-BR')}</p>
                 </div>
                 <div className="text-left md:text-right">
                    <p className="text-[10px] text-zinc-500 uppercase font-black tracking-widest mb-1">Total da Injeção</p>

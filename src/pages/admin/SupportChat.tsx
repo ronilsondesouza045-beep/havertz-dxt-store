@@ -18,6 +18,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
+import { safeDate } from '../../lib/utils';
 import { 
   Search, 
   MessageCircle, 
@@ -91,8 +92,8 @@ export default function AdminSupportChat() {
         return {
           id: doc.id,
           ...data,
-          updated_at: data.updated_at?.toDate?.()?.toISOString() || new Date().toISOString(),
-          created_at: data.created_at?.toDate?.()?.toISOString() || new Date().toISOString(),
+          updated_at: safeDate(data.updated_at).toISOString(),
+          created_at: safeDate(data.created_at).toISOString(),
         };
       }) as Conversation[];
       setConversations(convsData);
@@ -114,7 +115,7 @@ export default function AdminSupportChat() {
           return {
             id: doc.id,
             ...data,
-            created_at: data.created_at?.toDate?.()?.toISOString() || new Date().toISOString(),
+            created_at: safeDate(data.created_at).toISOString(),
           };
         }) as Message[];
         setMessages(msgsData);
@@ -272,7 +273,7 @@ export default function AdminSupportChat() {
                     <div className="flex justify-between items-start">
                       <h4 className="font-bold text-white text-sm uppercase truncate max-w-[150px]">{conv.customer_name}</h4>
                       <span className="text-[9px] text-zinc-600 font-bold italic">
-                        {conv.updated_at && format(new Date(conv.updated_at), 'HH:mm')}
+                        {conv.updated_at && format(safeDate(conv.updated_at), 'HH:mm')}
                       </span>
                     </div>
                     <p className="text-xs text-zinc-500 line-clamp-1 italic">{conv.last_message}</p>
@@ -404,7 +405,7 @@ export default function AdminSupportChat() {
                         <div className={`flex items-center gap-2 text-[9px] font-black italic uppercase ${
                           msg.sender_type === 'admin' ? 'justify-end text-zinc-500' : 'text-zinc-600'
                         }`}>
-                          {msg.created_at && format(new Date(msg.created_at), "HH:mm", { locale: ptBR })}
+                          {msg.created_at && format(safeDate(msg.created_at), "HH:mm", { locale: ptBR })}
                           {msg.sender_type === 'admin' && (
                             msg.read ? <CheckCheck size={10} className="text-neon-green" /> : <Check size={10} />
                           )}

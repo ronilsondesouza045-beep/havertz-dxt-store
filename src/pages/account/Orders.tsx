@@ -7,7 +7,7 @@ import { Badge } from '../../components/ui/Badge';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Order } from '../../types';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, safeDate } from '../../lib/utils';
 import { Package, Clock, Hash, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -107,7 +107,7 @@ export default function UserOrders() {
                                {order.status}
                             </Badge>
                             <span className="text-xs text-zinc-600 font-mono">
-                               {new Date(order.created_at).toLocaleDateString('pt-BR')}
+                               {safeDate(order.created_at).toLocaleDateString('pt-BR')}
                             </span>
                           </div>
                           

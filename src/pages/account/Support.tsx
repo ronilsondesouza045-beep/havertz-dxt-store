@@ -10,6 +10,7 @@ import { MessageCircle, Clock, CheckCircle2, ChevronRight, HelpCircle } from 'lu
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
+import { safeDate } from '../../lib/utils';
 
 interface Conversation {
   id: string;
@@ -42,8 +43,8 @@ export default function AccountSupport() {
         return {
           id: doc.id,
           ...data,
-          updated_at: data.updated_at?.toDate?.()?.toISOString() || new Date().toISOString(),
-          created_at: data.created_at?.toDate?.()?.toISOString() || new Date().toISOString(),
+          updated_at: safeDate(data.updated_at).toISOString(),
+          created_at: safeDate(data.created_at).toISOString(),
         };
       }) as Conversation[];
       setConversations(convsData);
@@ -134,7 +135,7 @@ export default function AccountSupport() {
                                 {conv.status}
                              </Badge>
                              <p className="text-[10px] text-zinc-600 mt-1 italic font-bold">
-                                {conv.updated_at && format(new Date(conv.updated_at), 'dd/MM HH:mm')}
+                                {conv.updated_at && format(safeDate(conv.updated_at), 'dd/MM HH:mm')}
                              </p>
                           </div>
                           <ChevronRight className="text-zinc-800 group-hover:text-neon-green transition-colors" />

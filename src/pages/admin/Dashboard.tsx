@@ -6,7 +6,7 @@ import { Card } from '../../components/ui/Card';
 import { collection, query, orderBy, limit, onSnapshot, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Order } from '../../types';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, safeDate } from '../../lib/utils';
 import { 
   TrendingUp, 
   Package, 
@@ -223,7 +223,7 @@ export default function AdminDashboard() {
                           <tr key={order.id} className="hover:bg-zinc-900/20 transition-colors group">
                              <td className="px-6 py-4">
                                 <p className="text-xs font-bold text-white uppercase italic">#{order.order_code}</p>
-                                <p className="text-[10px] text-zinc-600 font-mono">{new Date(order.created_at).toLocaleDateString()}</p>
+                                <p className="text-[10px] text-zinc-600 font-mono">{safeDate(order.created_at).toLocaleDateString()}</p>
                              </td>
                              <td className="px-6 py-4">
                                 <p className="text-xs text-white font-medium">{order.customer_name || 'Cliente'}</p>

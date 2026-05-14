@@ -9,7 +9,7 @@ import { Badge } from '../../components/ui/Badge';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Order } from '../../types';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, safeDate } from '../../lib/utils';
 import { Trash2, Eye, CheckCircle2, XCircle, Search, Filter, X, Copy, Package, Clock, User, Mail, Hash, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
@@ -379,7 +379,7 @@ export default function AdminOrders() {
                         </div>
                         <div>
                           <p className="text-[10px] font-black text-zinc-600 uppercase">Solicitado em</p>
-                          <p className="text-sm font-bold text-zinc-300">{new Date(selectedOrder.created_at).toLocaleString('pt-BR')}</p>
+                          <p className="text-sm font-bold text-zinc-300">{safeDate(selectedOrder.created_at).toLocaleString('pt-BR')}</p>
                         </div>
                       </div>
                     </div>

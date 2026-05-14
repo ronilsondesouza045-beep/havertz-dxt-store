@@ -66,7 +66,7 @@ export default function Checkout() {
     
     const fetchSettings = async () => {
       try {
-        const settingsRef = doc(db, 'settings', 'global');
+        const settingsRef = doc(db, 'settings', 'config');
         const docSnap = await getDoc(settingsRef);
         if (docSnap.exists()) {
           setSettings(docSnap.data());
@@ -79,7 +79,7 @@ export default function Checkout() {
   }, [product, navigate]);
 
   const handleCopyPix = () => {
-    const pixKey = 'havertz.dxt@gmail.com';
+    const pixKey = settings?.pix_key || 'havertz.dxt@gmail.com';
     navigator.clipboard.writeText(pixKey);
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
@@ -136,13 +136,24 @@ export default function Checkout() {
       const orderData = {
         order_code: orderCode,
         user_id: user.uid,
-        customer_name: profile?.name || user.email || 'Cliente',
+        customer_name: profile?.name || user.displayName || 'Cliente',
         customer_email: user.email || '',
         imvu_nick: formData.imvu_nick || '',
+        player_id: formData.player_id || '',
+        player_nick: formData.player_nick || '',
+        instagram_handle: formData.instagram_handle || '',
+        access_email: formData.access_email || '',
         product_type: product.type || product.category,
-        amount_k: (product as any).amount_k || 0,
+        product_name: product.name,
+        product_category: product.category,
+        notes: formData.note || '',
+        main_field_label: mainFieldLabel,
+        main_field_value: mainFieldValue,
+        payment_method: 'PIX',
+        payment_status: 'aguardando comprovante',
         total_price: product.price,
-        status: 'aguardando pagamento',
+        amount_k: (product as any).amount_k || 0,
+        status: 'aguardando comprovante',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
@@ -153,6 +164,7 @@ export default function Checkout() {
         orderId = orderRef.id;
       } catch (err) {
         handleFirestoreError(err, OperationType.WRITE, 'orders');
+        throw err;
       }
 
       // 2. Integration with Support Chat

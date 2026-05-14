@@ -12,6 +12,13 @@ export function formatCurrency(value: number) {
   }).format(value);
 }
 
+export function safeDate(date: any): Date {
+  if (!date) return new Date();
+  if (typeof date.toDate === 'function') return date.toDate();
+  const parsed = new Date(date);
+  return isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
 export function generateOrderCode() {
   return Math.random().toString(36).substring(2, 10).toUpperCase();
 }
