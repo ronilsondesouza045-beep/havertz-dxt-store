@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
@@ -29,19 +27,31 @@ export default function Register() {
 
     try {
       // 1. Sign up user
-      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-      const user = userCredential.user;
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.name,
+          }
+        }
+      });
+      
+      if (signUpError) throw signUpError;
+      const user = data.user;
 
       if (user) {
-        // 2. Create profile entry in Firestore
-        await setDoc(doc(db, 'profiles', user.uid), {
-          id: user.uid,
+        // 2. Create profile entry in Supabase Table
+        const { error: profileError } = await supabase.from('profiles').insert({
+          id: user.id,
           name: formData.name,
           email: formData.email,
           imvu_nick: formData.imvu_nick,
           role: isAdminEmail(formData.email) ? 'admin' : 'client',
           created_at: new Date().toISOString()
         });
+        
+        if (profileError) throw profileError;
       }
 
       navigate('/account');
@@ -55,28 +65,15 @@ export default function Register() {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     setError(null);
-    const provider = new GoogleAuthProvider();
 
     try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      // Check if profile exists
-      const docRef = doc(db, 'profiles', user.uid);
-      const docSnap = await getDoc(docRef);
-
-      if (!docSnap.exists()) {
-        await setDoc(docRef, {
-          id: user.uid,
-          name: user.displayName || 'Usuário Google',
-          email: user.email || '',
-          imvu_nick: '', // Will need to be filled later
-          role: isAdminEmail(user.email) ? 'admin' : 'client',
-          created_at: new Date().toISOString()
-        });
-      }
-
-      navigate('/account');
+      const { error: googleError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/account'
+        }
+      });
+      if (googleError) throw googleError;
     } catch (err: any) {
       setError(err.message || 'Erro ao entrar com Google');
     } finally {

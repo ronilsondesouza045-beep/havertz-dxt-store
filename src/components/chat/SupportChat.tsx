@@ -13,25 +13,9 @@ import {
   Eye,
   ExternalLink
 } from 'lucide-react';
-import { 
-  collection, 
-  addDoc, 
-  query, 
-  orderBy, 
-  onSnapshot, 
-  updateDoc, 
-  doc, 
-  setDoc,
-  getDoc,
-  where,
-  getDocs
-} from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../../lib/firebase';
+import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { format } from 'date-fns';
 import { Button } from '../ui/Button';
-import { ReceiptVerificationStatus } from '../../types';
 
 interface Message {
   id: string;
@@ -42,11 +26,9 @@ interface Message {
   image_url?: string;
   file_url?: string;
   read: boolean;
-  created_at: any;
+  created_at: string;
   file_name?: string;
   file_type?: string;
-  receipt_verification_status?: ReceiptVerificationStatus;
-  receipt_verification_reason?: string;
 }
 
 interface Conversation {
@@ -56,12 +38,12 @@ interface Conversation {
   order_code?: string;
   customer_name: string;
   customer_email: string;
-  status: 'aberta' | 'respondida' | 'aguardando cliente' | 'resolvida' | 'fechada';
+  status: 'aberta' | 'respondida' | 'finalizada';
   last_message: string;
   typing_client?: boolean;
   typing_admin?: boolean;
-  created_at: any;
-  updated_at: any;
+  created_at: string;
+  updated_at: string;
 }
 
 export function SupportChat() {
@@ -73,7 +55,6 @@ export function SupportChat() {
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [formData, setFormData] = useState({
     name: profile?.name || '',
     email: profile?.email || '',
@@ -82,7 +63,6 @@ export function SupportChat() {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const savedConvId = localStorage.getItem('havertz_chat_conv_id');
@@ -103,66 +83,57 @@ export function SupportChat() {
   }, []);
 
   useEffect(() => {
-    if (profile) {
-      setFormData(prev => ({ ...prev, name: profile.name, email: profile.email }));
-    }
-  }, [profile]);
-
-  useEffect(() => {
     if (conversation && isOpen) {
-      const q = query(
-        collection(db, `support_conversations/${conversation.id}/messages`),
-        orderBy('created_at', 'asc')
-      );
+      const fetchMsgs = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('support_messages')
+            .select('*')
+            .eq('conversation_id', conversation.id)
+            .order('created_at', { ascending: true });
 
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const msgs = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Message[];
-        
-        const lastMsg = msgs[msgs.length - 1];
-        if (lastMsg && lastMsg.sender_type === 'admin' && !lastMsg.read) {
-          playNotification();
+          if (error) throw error;
+          setMessages(data as Message[]);
+          scrollToBottom();
+        } catch (err) {
+          console.error('Error fetching messages:', err);
         }
+      };
 
-        setMessages(msgs);
-        scrollToBottom();
-      }, (error) => {
-        console.error('Error in SupportChat messages snapshot:', error);
-      });
+      fetchMsgs();
 
-      const unsubConv = onSnapshot(doc(db, 'support_conversations', conversation.id), (doc) => {
-        if (doc.exists()) {
-          setConversation({ id: doc.id, ...doc.data() } as Conversation);
-        }
-      }, (error) => {
-        console.error('Error in SupportChat conversation snapshot:', error);
-      });
+      const subscription = supabase
+        .channel(`chat_${conversation.id}`)
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'support_messages',
+          filter: `conversation_id=eq.${conversation.id}`
+        }, () => {
+          fetchMsgs();
+        })
+        .subscribe();
 
       return () => {
-        unsubscribe();
-        unsubConv();
+        supabase.removeChannel(subscription);
       };
     }
   }, [conversation?.id, isOpen]);
 
   const loadConversation = async (id: string) => {
     try {
-      const docRef = doc(db, 'support_conversations', id);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const data = { id: docSnap.id, ...docSnap.data() } as Conversation;
-        setConversation(data);
+      const { data, error } = await supabase
+        .from('support_conversations')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (data) {
+        setConversation(data as Conversation);
         localStorage.setItem('havertz_chat_conv_id', id);
       }
     } catch (err) {
       console.error('Error loading conversation:', err);
     }
-  };
-
-  const playNotification = () => {
-    if (audioRef.current) audioRef.current.play().catch(() => {});
   };
 
   const scrollToBottom = () => {
@@ -173,44 +144,39 @@ export function SupportChat() {
     }, 100);
   };
 
-  const handleTyping = () => {
-    if (!conversation) return;
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    
-    updateDoc(doc(db, 'support_conversations', conversation.id), { typing_client: true });
-
-    typingTimeoutRef.current = setTimeout(() => {
-      updateDoc(doc(db, 'support_conversations', conversation.id), { typing_client: false });
-    }, 3000);
-  };
-
   const handleStartConversation = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsStarting(true);
     try {
-      const convId = crypto.randomUUID();
-      const newConv: Omit<Conversation, 'id'> = {
-        user_id: user?.uid || undefined,
-        customer_name: formData.name,
-        customer_email: formData.email,
-        status: 'aberta',
-        last_message: 'Iniciou atendimento',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+      const { data: newConv, error: convError } = await supabase
+        .from('support_conversations')
+        .insert({
+          user_id: user?.id,
+          customer_name: formData.name,
+          customer_email: formData.email,
+          subject: formData.subject || 'Atendimento via Site',
+          status: 'aberta',
+          last_message: 'Atendimento iniciado'
+        })
+        .select()
+        .single();
 
-      await setDoc(doc(db, 'support_conversations', convId), newConv);
-      setConversation({ id: convId, ...newConv } as Conversation);
-      localStorage.setItem('havertz_chat_conv_id', convId);
+      if (convError) throw convError;
+      
+      if (newConv) {
+        setConversation(newConv as Conversation);
+        localStorage.setItem('havertz_chat_conv_id', newConv.id);
 
-      await addDoc(collection(db, `support_conversations/${convId}/messages`), {
-        conversation_id: convId,
-        sender_type: 'client',
-        sender_id: user?.uid || 'anonymous',
-        message: formData.subject || 'Preciso de ajuda',
-        read: false,
-        created_at: new Date().toISOString()
-      });
+        await supabase
+          .from('support_messages')
+          .insert({
+            conversation_id: newConv.id,
+            sender_type: 'client',
+            sender_id: user?.id || 'anonymous',
+            message: formData.subject || 'Preciso de ajuda',
+            read: false
+          });
+      }
     } catch (err) { console.error(err); } finally { setIsStarting(false); }
   };
 
@@ -223,94 +189,30 @@ export function SupportChat() {
     setIsLoading(true);
 
     try {
-      await addDoc(collection(db, `support_conversations/${conversation.id}/messages`), {
-        conversation_id: conversation.id,
-        sender_type: 'client',
-        sender_id: user?.uid || 'anonymous',
-        message: msgText,
-        read: false,
-        created_at: new Date().toISOString()
-      });
+      await supabase
+        .from('support_messages')
+        .insert({
+          conversation_id: conversation.id,
+          sender_type: 'client',
+          sender_id: user?.id || 'anonymous',
+          message: msgText,
+          read: false
+        });
       
-      await updateDoc(doc(db, 'support_conversations', conversation.id), {
-        last_message: msgText,
-        updated_at: new Date().toISOString(),
-        status: 'aberta',
-        typing_client: false
-      });
+      await supabase
+        .from('support_conversations')
+        .update({
+          last_message: msgText,
+          updated_at: new Date().toISOString(),
+          status: 'aberta'
+        })
+        .eq('id', conversation.id);
+      
       scrollToBottom();
     } catch (err) { 
       console.error("Erro ao enviar mensagem:", err);
     } finally { 
       setIsLoading(false); 
-    }
-  };
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !conversation || !user) return;
-
-    // Check file size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert("O arquivo é muito grande. O limite é 5MB.");
-      return;
-    }
-
-    setUploading(true);
-    
-    try {
-      // 1. Upload for Storage
-      const fileExt = file.name.split('.').pop() || 'file';
-      const fileName = `support-files/${conversation.id}/${Date.now()}.${fileExt}`;
-      const storageRef = ref(storage, fileName);
-      
-      const snapshot = await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(snapshot.ref);
-
-      // 2. Create message in support_messages
-      const messageType = file.type.includes('pdf') ? '📄 Documento' : '📷 Imagem';
-      
-      await addDoc(collection(db, `support_conversations/${conversation.id}/messages`), {
-        conversation_id: conversation.id,
-        sender_type: 'client',
-        sender_id: user.uid,
-        message: `${messageType} enviado.`,
-        image_url: downloadURL,
-        file_url: downloadURL,
-        file_name: file.name,
-        file_type: file.type,
-        read: false,
-        created_at: new Date().toISOString()
-      });
-
-      // 3. Update conversation
-      await updateDoc(doc(db, 'support_conversations', conversation.id), {
-        last_message: messageType,
-        updated_at: new Date().toISOString(),
-        status: 'aberta'
-      });
-
-      // 4. Update order if exists (Optional)
-      if (conversation.order_id) {
-        try {
-          await updateDoc(doc(db, 'orders', conversation.order_id), {
-            status: 'em análise',
-            payment_status: 'comprovante recebido',
-            proof_image_url: downloadURL,
-            proof_file_name: file.name,
-            updated_at: new Date().toISOString()
-          });
-        } catch (orderError) {
-          console.warn("Aviso: Falha ao atualizar pedido vinculado:", orderError);
-        }
-      }
-
-    } catch (err: any) {
-      console.error("Erro ao processar upload no suporte:", err);
-      alert('Não foi possível enviar o arquivo. Tente novamente.');
-    } finally {
-      setUploading(false);
-      if (e.target) e.target.value = '';
     }
   };
 

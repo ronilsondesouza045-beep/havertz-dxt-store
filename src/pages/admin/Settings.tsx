@@ -3,8 +3,7 @@ import { MainLayout } from '../../layouts/MainLayout';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
+import { supabase } from '../../lib/supabase';
 import { Settings } from '../../types';
 import { Save, AlertCircle, ShoppingBag, MessageSquare, Landmark } from 'lucide-react';
 
@@ -20,10 +19,14 @@ export default function AdminSettings() {
 
   async function fetchSettings() {
     try {
-      const docRef = doc(db, 'settings', 'config');
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        setSettings(docSnap.data() as Settings);
+      const { data, error } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('id', 1)
+        .single();
+        
+      if (data) {
+        setSettings(data as Settings);
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -39,9 +42,7 @@ export default function AdminSettings() {
     setSaveLoading(true);
     setSuccess(false);
 
-    const settingsPath = 'settings/config';
     try {
-      const docRef = doc(db, 'settings', 'config');
       const settingsData = {
         pix_key: settings.pix_key,
         pix_name: settings.pix_name,
@@ -54,17 +55,17 @@ export default function AdminSettings() {
         updated_at: new Date().toISOString()
       };
       
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        await updateDoc(docRef, settingsData);
-      } else {
-        await setDoc(docRef, settingsData);
-      }
+      const { error } = await supabase
+        .from('settings')
+        .update(settingsData)
+        .eq('id', 1);
+
+      if (error) throw error;
 
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
-      handleFirestoreError(err, OperationType.WRITE, settingsPath);
+      console.error('Error updating settings:', err);
     } finally {
       setSaveLoading(false);
     }

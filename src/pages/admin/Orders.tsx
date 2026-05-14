@@ -6,8 +6,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
-import { collection, doc, updateDoc, query, orderBy, onSnapshot, deleteDoc, getDocs } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
+import { supabase } from '../../lib/supabase';
 import { Order } from '../../types';
 import { formatCurrency } from '../../lib/utils';
 import { Trash2, Eye, CheckCircle2, XCircle, Search, Filter, X, Copy, Package, Clock, User, Mail, Hash, CreditCard } from 'lucide-react';
@@ -37,30 +36,19 @@ export default function AdminOrders() {
 
   // Stable data fetching
   const fetchOrders = async () => {
-    const ordersPath = 'orders';
     setLoading(true);
     setError(null);
     try {
-      const q = query(collection(db, ordersPath));
-      const snapshot = await getDocs(q);
-      
-      const ordersData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }) as Order);
-      
-      // Sort in memory instead
-      ordersData.sort((a, b) => {
-        const dateA = new Date(a.created_at || 0).getTime();
-        const dateB = new Date(b.created_at || 0).getTime();
-        return dateB - dateA;
-      });
+      const { data, error: fetchError } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      setOrders(ordersData);
+      if (fetchError) throw fetchError;
+      setOrders((data || []) as Order[]);
     } catch (err: any) {
       console.error("Error fetching orders:", err);
       setError("Erro ao carregar pedidos. Verifique sua conexão.");
-      handleFirestoreError(err, OperationType.LIST, ordersPath);
     } finally {
       setLoading(false);
     }
@@ -73,14 +61,18 @@ export default function AdminOrders() {
   const handleUpdateStatus = async (orderId: string, updates: Partial<Order>) => {
     setUpdateLoading(orderId);
     try {
-      const docRef = doc(db, 'orders', orderId);
-      await updateDoc(docRef, {
-        ...updates,
-        updated_at: new Date().toISOString()
-      });
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+
+      if (updateError) throw updateError;
       await fetchOrders();
     } catch (err: any) {
-      handleFirestoreError(err, OperationType.UPDATE, `orders/${orderId}`);
+      console.error('Error updating order:', err);
       alert('Erro ao atualizar pedido');
     } finally {
       setUpdateLoading(null);
@@ -92,8 +84,12 @@ export default function AdminOrders() {
     
     setUpdateLoading(orderId);
     try {
-      const docRef = doc(db, 'orders', orderId);
-      await deleteDoc(docRef);
+      const { error: deleteError } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', orderId);
+
+      if (deleteError) throw deleteError;
       
       // Update local state immediately
       setOrders(prev => prev.filter(o => o.id !== orderId));
@@ -102,7 +98,6 @@ export default function AdminOrders() {
       toast.success('Pedido excluído com sucesso.');
     } catch (err: any) {
       console.error("Error deleting order:", err);
-      handleFirestoreError(err, OperationType.DELETE, `orders/${orderId}`);
       toast.error('Erro ao excluir pedido');
     } finally {
       setUpdateLoading(null);

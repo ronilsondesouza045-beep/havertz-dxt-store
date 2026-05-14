@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { User } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
 import { Profile } from '../types';
 import { isAdminEmail } from '../constants/admins';
 
@@ -21,55 +20,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      if (user) {
-        await fetchProfile(user.uid);
+    // Initial session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      const activeUser = session?.user ?? null;
+      setUser(activeUser);
+      if (activeUser) {
+        fetchProfile(activeUser.id);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const activeUser = session?.user ?? null;
+      setUser(activeUser);
+      if (activeUser) {
+        await fetchProfile(activeUser.id);
       } else {
         setProfile(null);
         setLoading(false);
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   async function fetchProfile(userId: string) {
     try {
-      const docRef = doc(db, 'profiles', userId);
-      let docSnap;
-      
-      try {
-        docSnap = await getDoc(docRef);
-      } catch (getErr: any) {
-        // Only log if it's not a permission error or similar that we might expect if profile doesn't exist
-        // Actually, getDoc shouldn't fail if document doesn't exist, it should just return exists() === false
-        // If it throws, it's likely a permission issue.
-        if (getErr.code === 'permission-denied') {
-          console.error('Permission denied while fetching profile:', userId);
-        }
-        throw getErr;
-      }
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-      if (docSnap.exists()) {
-        const data = docSnap.data() as Profile;
-        setProfile(data);
-      } else {
-        // Profile doesn't exist yet
+      if (error) {
+        if (error.code !== 'PGRST116') {
+          console.error('Error fetching profile:', error);
+        }
         setProfile(null);
+      } else {
+        setProfile(data as Profile);
       }
     } catch (err) {
-      console.error('Error in fetchProfile:', err);
+      console.error('Unexpected error in fetchProfile:', err);
     } finally {
       setLoading(false);
     }
   }
 
   const signOut = async () => {
-    await firebaseSignOut(auth);
+    await supabase.auth.signOut();
   };
 
-  const isAdmin = profile?.role === 'admin' || isAdminEmail(user?.email);
+  const isAdmin = profile?.role === 'admin' || isAdminEmail(user?.email || '');
 
   return (
     <AuthContext.Provider value={{ user, profile, loading, signOut, isAdmin }}>

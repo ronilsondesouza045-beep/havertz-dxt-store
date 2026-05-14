@@ -47,26 +47,65 @@ INSERT INTO settings (id, pix_key, pix_name, whatsapp, store_notice, store_open)
 VALUES (1, 'seu-pix@exemplo.com', 'Nome do Favorecido', '5511999999999', 'Bem-vindo à Havertz.DXT! Entrega manual e segura.', true)
 ON CONFLICT (id) DO NOTHING;
 
--- 4. Enable RLS
+-- 4. Create Support Chat Tables
+CREATE TABLE support_conversations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  order_id UUID REFERENCES orders(id) ON DELETE SET NULL,
+  order_code TEXT,
+  customer_name TEXT NOT NULL,
+  customer_email TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  status TEXT DEFAULT 'aberta' CHECK (status IN ('aberta', 'respondida', 'finalizada')),
+  last_message TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+CREATE TABLE support_messages (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  conversation_id UUID REFERENCES support_conversations(id) ON DELETE CASCADE NOT NULL,
+  sender_type TEXT NOT NULL CHECK (sender_type IN ('admin', 'client')),
+  sender_id TEXT NOT NULL,
+  message TEXT NOT NULL,
+  read BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+-- 5. Enable RLS
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE support_conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE support_messages ENABLE ROW LEVEL SECURITY;
 
--- 5. RLS Policies for Profiles
+-- 6. RLS Policies for Profiles
 CREATE POLICY "Public profiles are viewable by everyone" ON profiles FOR SELECT USING (true);
 CREATE POLICY "Users can update their own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "Admins can update any profile" ON profiles FOR UPDATE USING (
   EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
 );
 
--- 6. RLS Policies for Orders
+-- 7. RLS Policies for Orders
 CREATE POLICY "Users can view their own orders" ON orders FOR SELECT USING (auth.uid() = user_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
 CREATE POLICY "Users can create their own orders" ON orders FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Only admins can update orders" ON orders FOR UPDATE USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
 
--- 7. RLS Policies for Settings
+-- 8. RLS Policies for Settings
 CREATE POLICY "Settings are viewable by everyone" ON settings FOR SELECT USING (true);
 CREATE POLICY "Only admins can update settings" ON settings FOR UPDATE USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+
+-- 9. RLS Policies for Support
+CREATE POLICY "Users can view their own conversations" ON support_conversations FOR SELECT USING (auth.uid() = user_id OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+CREATE POLICY "Users can create their own conversations" ON support_conversations FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Admins can update conversations" ON support_conversations FOR UPDATE USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
+
+CREATE POLICY "Users can view their own messages" ON support_messages FOR SELECT USING (
+  EXISTS (SELECT 1 FROM support_conversations WHERE id = conversation_id AND (user_id = auth.uid() OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')))
+);
+CREATE POLICY "Users can send messages" ON support_messages FOR INSERT WITH CHECK (
+  EXISTS (SELECT 1 FROM support_conversations WHERE id = conversation_id AND (user_id = auth.uid() OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')))
+);
 
 -- 8. Functions & Triggers for auto-role (Basic approach)
 -- Note: In a real app, you'd use a Trigger or Edge Function to set admin based on email

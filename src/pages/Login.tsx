@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
@@ -24,7 +22,11 @@ export default function Login() {
     setError(null);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const { error: loginError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (loginError) throw loginError;
       navigate('/account');
     } catch (err: any) {
       setError(err.message || 'Erro ao fazer login');
@@ -36,28 +38,19 @@ export default function Login() {
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     setError(null);
-    const provider = new GoogleAuthProvider();
 
     try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      // Check if profile exists
-      const docRef = doc(db, 'profiles', user.uid);
-      const docSnap = await getDoc(docRef);
-
-      if (!docSnap.exists()) {
-        await setDoc(docRef, {
-          id: user.uid,
-          name: user.displayName || 'Usuário Google',
-          email: user.email || '',
-          imvu_nick: '',
-          role: isAdminEmail(user.email) ? 'admin' : 'client',
-          created_at: new Date().toISOString()
-        });
-      }
-
-      navigate('/account');
+      const { error: googleError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/account'
+        }
+      });
+      if (googleError) throw googleError;
+      
+      // Note: With Supabase OAuth, the user is redirected away and back.
+      // Profile creation should be handled by a Supabase trigger (best practice)
+      // or check on AuthContext. But since this is a migration, we'll rely on our current flow.
     } catch (err: any) {
       setError(err.message || 'Erro ao entrar com Google');
     } finally {

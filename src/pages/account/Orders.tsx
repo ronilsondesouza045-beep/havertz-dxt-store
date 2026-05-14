@@ -4,8 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
+import { supabase } from '../../lib/supabase';
 import { Order } from '../../types';
 import { formatCurrency } from '../../lib/utils';
 import { Package, Clock, Hash, ChevronRight } from 'lucide-react';
@@ -21,20 +20,17 @@ export default function UserOrders() {
     if (!user) return;
 
     const fetchOrders = async () => {
-      const ordersPath = 'orders';
       try {
-        const q = query(
-          collection(db, ordersPath),
-          where('user_id', '==', user.uid),
-          orderBy('created_at', 'desc')
-        );
-        const querySnapshot = await getDocs(q);
-        const ordersData = querySnapshot.docs.map(doc => ({
-          ...doc.data()
-        } as Order));
-        setOrders(ordersData);
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setOrders(data as Order[]);
       } catch (err: any) {
-        handleFirestoreError(err, OperationType.LIST, ordersPath);
+        console.error('Error fetching orders:', err);
       } finally {
         setLoading(false);
       }

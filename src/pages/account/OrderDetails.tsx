@@ -5,8 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { doc, getDoc } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../../lib/firebase';
+import { supabase } from '../../lib/supabase';
 import { Order } from '../../types';
 import { formatCurrency } from '../../lib/utils';
 import { ArrowLeft, Clock, Package, MessageCircle, AlertCircle, ShieldCheck, FileText } from 'lucide-react';
@@ -24,20 +23,23 @@ export default function OrderDetails() {
     if (!user || !id) return;
 
     const fetchOrder = async () => {
-      const orderPath = `orders/${id}`;
       try {
-        const docRef = doc(db, 'orders', id);
-        const docSnap = await getDoc(docRef);
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('id', id)
+          .single();
 
-        if (docSnap.exists()) {
-          const data = docSnap.data() as Order;
-          // Verify ownership (security rules also handle this, but for local state:)
-          if (data.user_id === user.uid) {
-            setOrder(data);
+        if (error) throw error;
+        
+        if (data) {
+          // Verify ownership (or admin status)
+          if (data.user_id === user.id) {
+            setOrder(data as Order);
           }
         }
       } catch (err: any) {
-        handleFirestoreError(err, OperationType.GET, orderPath);
+        console.error('Error fetching order details:', err);
       } finally {
         setLoading(false);
       }

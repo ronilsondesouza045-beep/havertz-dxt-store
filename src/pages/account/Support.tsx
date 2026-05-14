@@ -4,20 +4,18 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { supabase } from '../../lib/supabase';
 import { MessageCircle, Clock, CheckCircle2, ChevronRight, HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
 
 interface Conversation {
   id: string;
   customer_name: string;
   subject: string;
-  status: 'aberta' | 'respondida' | 'aguardando cliente' | 'resolvida' | 'fechada';
+  status: 'aberta' | 'respondida' | 'fechada';
   last_message: string;
-  updated_at: any;
-  created_at: any;
+  updated_at: string;
+  created_at: string;
 }
 
 export default function AccountSupport() {
@@ -28,25 +26,41 @@ export default function AccountSupport() {
   useEffect(() => {
     if (!user) return;
 
-    const q = query(
-      collection(db, 'support_conversations'),
-      where('user_id', '==', user.uid),
-      orderBy('updated_at', 'desc')
-    );
+    const fetchConversations = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('support_conversations')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('updated_at', { ascending: false });
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const convs = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Conversation[];
-      setConversations(convs);
-      setLoading(false);
-    }, (error) => {
-      console.error('Error in AccountSupport snapshot:', error);
-      setLoading(false);
-    });
+        if (error) throw error;
+        setConversations(data as Conversation[]);
+      } catch (err: any) {
+        console.error('Error fetching conversations:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    return () => unsubscribe();
+    fetchConversations();
+
+    // Basic real-time subscription
+    const subscription = supabase
+      .channel('support_conversations_changes')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'support_conversations',
+        filter: `user_id=eq.${user.id}`
+      }, (payload) => {
+        fetchConversations();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, [user]);
 
   const getStatusColor = (status: Conversation['status']) => {
