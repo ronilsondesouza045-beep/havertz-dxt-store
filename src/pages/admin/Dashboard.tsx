@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MainLayout } from '../../layouts/MainLayout';
 import { useAuth } from '../../contexts/AuthContext';
 import { Card } from '../../components/ui/Card';
-import { collection, query, where, orderBy, limit, onSnapshot, getDocs } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, onSnapshot, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Order } from '../../types';
 import { formatCurrency, safeDate } from '../../lib/utils';
@@ -16,10 +16,12 @@ import {
   Users,
   Zap,
   Gift,
-  Eye
+  Eye,
+  Trash2
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
+import { toast } from 'react-hot-toast';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -39,6 +41,27 @@ export default function AdminDashboard() {
   });
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [updateLoading, setUpdateLoading] = useState<string | null>(null);
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!window.confirm('Tem certeza que deseja excluir este pedido?')) return;
+    
+    setUpdateLoading(orderId);
+    try {
+      const orderRef = doc(db, 'orders', orderId);
+      await updateDoc(orderRef, {
+        is_deleted: true,
+        deleted_by: 'admin',
+        deleted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+      toast.success('Pedido removido com sucesso.');
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.UPDATE, `orders/${orderId}`);
+    } finally {
+      setUpdateLoading(null);
+    }
+  };
 
   useEffect(() => {
     const ordersRef = collection(db, 'orders');
@@ -259,6 +282,14 @@ export default function AdminDashboard() {
                                      title="Ver Detalhes"
                                    >
                                       <Eye size={14} />
+                                   </button>
+                                   <button 
+                                     onClick={() => handleDeleteOrder(order.id)}
+                                     className="p-2 hover:bg-red-600 rounded-lg text-zinc-500 hover:text-white transition-colors"
+                                     title="Excluir"
+                                     disabled={updateLoading === order.id}
+                                   >
+                                      <Trash2 size={14} />
                                    </button>
                                 </div>
                              </td>

@@ -6,7 +6,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Order } from '../../types';
 import { formatCurrency, safeDate } from '../../lib/utils';
@@ -83,11 +83,18 @@ export default function AdminOrders() {
     
     setUpdateLoading(orderId);
     try {
-      await deleteDoc(doc(db, 'orders', orderId));
+      const orderRef = doc(db, 'orders', orderId);
+      await updateDoc(orderRef, {
+        is_deleted: true,
+        deleted_by: 'admin',
+        deleted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+      
       if (selectedOrderId === orderId) setSelectedOrderId(null);
-      toast.success('Pedido excluído com sucesso.');
+      toast.success('Pedido removido com sucesso.');
     } catch (err: any) {
-      handleFirestoreError(err, OperationType.DELETE, `orders/${orderId}`);
+      handleFirestoreError(err, OperationType.UPDATE, `orders/${orderId}`);
     } finally {
       setUpdateLoading(null);
     }
