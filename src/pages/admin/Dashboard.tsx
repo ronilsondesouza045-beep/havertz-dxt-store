@@ -43,27 +43,31 @@ export default function AdminDashboard() {
   useEffect(() => {
     const ordersRef = collection(db, 'orders');
     
-    // Recent orders only (including is_deleted filter)
+    // Recent orders only
     const recentQuery = query(
       ordersRef, 
-      where('is_deleted', '==', false),
       orderBy('created_at', 'desc'), 
-      limit(10)
+      limit(20) // Get more to account for filtered deleted items
     );
     const unsubscribeRecent = onSnapshot(recentQuery, (snapshot) => {
-      const ordersData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Order[];
+      const ordersData = snapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as Order))
+        .filter(order => order.is_deleted !== true)
+        .slice(0, 10); // Keep only the latest 10 non-deleted
+        
       setRecentOrders(ordersData);
     });
 
-    // Statistics (need all orders or a cloud function, but here we'll pull all for simplicity in a dashboard)
+    // Statistics 
     const fetchAllStats = async () => {
       try {
-        const q = query(ordersRef, where('is_deleted', '==', false));
-        const snapshot = await getDocs(q);
-        const orders = snapshot.docs.map(doc => doc.data() as Order);
+        const snapshot = await getDocs(ordersRef);
+        const orders = snapshot.docs
+          .map(doc => doc.data() as Order)
+          .filter(order => order.is_deleted !== true);
         
         const totalSales = orders.reduce((acc, order) => acc + (order.status !== 'cancelado' ? Number(order.total_price) : 0), 0);
         const totalK = orders.reduce((acc, order) => acc + (order.status !== 'cancelado' ? (order.amount_k || 0) : 0), 0);

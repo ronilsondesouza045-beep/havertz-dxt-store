@@ -154,6 +154,7 @@ export default function Checkout() {
         total_price: product.price,
         amount_k: (product as any).amount_k || 0,
         status: 'aguardando comprovante',
+        is_deleted: false,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };

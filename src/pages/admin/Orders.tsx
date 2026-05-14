@@ -41,15 +41,17 @@ export default function AdminOrders() {
     // Soft delete filter: clients can remove orders from their view and admin view
     const q = query(
       ordersRef, 
-      where('is_deleted', '==', false),
       orderBy('created_at', 'desc')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const ordersData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Order[];
+      const ordersData = snapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as Order))
+        .filter(order => order.is_deleted !== true); // Handles cases where field is missing
+      
       setOrders(ordersData);
       setLoading(false);
     }, (error) => {

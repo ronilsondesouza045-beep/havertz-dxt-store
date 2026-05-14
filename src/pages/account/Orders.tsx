@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { collection, query, where, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, or, and } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Order } from '../../types';
 import { formatCurrency, safeDate } from '../../lib/utils';
@@ -22,24 +22,37 @@ export default function UserOrders() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      // If user state is explicitly null (not just undefined/loading), stop loading
+      if (user === null) setLoading(false);
+      return;
+    }
 
     const ordersRef = collection(db, 'orders');
+    
+    // Create a query that finds orders by user_id OR customer_email
     const q = query(
       ordersRef,
-      where('user_id', '==', user.uid),
-      where('is_deleted', '==', false),
+      or(
+        where('user_id', '==', user.uid),
+        where('customer_email', '==', user.email)
+      ),
       orderBy('created_at', 'desc')
     );
 
+    setLoading(true);
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const ordersData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Order[];
+      const ordersData = snapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as Order))
+        .filter(order => order.is_deleted !== true); // Handles cases where field is missing
+      
       setOrders(ordersData);
       setLoading(false);
     }, (error) => {
+      console.error('Error fetching orders:', error);
       handleFirestoreError(error, OperationType.GET, 'orders');
       setLoading(false);
     });
@@ -145,9 +158,46 @@ export default function UserOrders() {
                                 <h4 className="text-white font-bold text-lg">
                                    {order.product_name}
                                 </h4>
-                                <p className="text-xs text-zinc-500 italic uppercase">
-                                   {order.product_category === 'credits' ? `Via ${order.product_type}` : order.product_category}
-                                </p>
+                                <div className="flex flex-col gap-1">
+                                   <p className="text-xs text-zinc-500 italic uppercase">
+                                      {order.product_category === 'credits' ? `Via ${order.product_type}` : order.product_category}
+                                   </p>
+                                   {/* Identification Details */}
+                                   {(order.imvu_nick || order.player_id || order.player_nick || order.instagram_handle || order.access_email) && (
+                                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
+                                        {order.imvu_nick && (
+                                          <p className="text-[10px] text-zinc-400 capitalize">
+                                            <span className="font-bold text-zinc-500 uppercase mr-1">IMVU:</span> {order.imvu_nick}
+                                          </p>
+                                        )}
+                                        {order.player_id && (
+                                          <p className="text-[10px] text-zinc-400">
+                                            <span className="font-bold text-zinc-500 uppercase mr-1">ID:</span> {order.player_id}
+                                          </p>
+                                        )}
+                                        {order.player_nick && (
+                                          <p className="text-[10px] text-zinc-400">
+                                            <span className="font-bold text-zinc-500 uppercase mr-1">Nick:</span> {order.player_nick}
+                                          </p>
+                                        )}
+                                        {order.instagram_handle && (
+                                          <p className="text-[10px] text-zinc-400">
+                                            <span className="font-bold text-zinc-500 uppercase mr-1">IG:</span> @{order.instagram_handle.replace('@', '')}
+                                          </p>
+                                        )}
+                                        {order.access_email && (
+                                          <p className="text-[10px] text-zinc-400">
+                                            <span className="font-bold text-zinc-500 uppercase mr-1">Acesso:</span> {order.access_email}
+                                          </p>
+                                        )}
+                                     </div>
+                                   )}
+                                   {order.notes && (
+                                     <p className="text-[10px] text-zinc-500 italic mt-1 line-clamp-1 max-w-md">
+                                        <span className="font-bold uppercase mr-1">Obs:</span> {order.notes}
+                                     </p>
+                                   )}
+                                </div>
                              </div>
                           </div>
                        </div>
