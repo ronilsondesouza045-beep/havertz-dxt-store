@@ -99,21 +99,21 @@ export default function Register() {
 
   return (
     <MainLayout>
-      <div className="container mx-auto flex items-center justify-center py-20 px-4">
-        <Card className="w-full max-w-md p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2 uppercase italic">Criar Conta 🧪</h1>
-            <p className="text-zinc-500 text-sm">Junte-se à elite dos créditos IMVU.</p>
+      <div className="container mx-auto flex items-center justify-center py-10 md:py-20 px-4 md:px-0">
+        <Card className="w-full max-w-md p-6 md:p-10">
+          <div className="text-center mb-10">
+            <h1 className="text-3xl md:text-4xl font-black text-white mb-3 uppercase italic tracking-tighter">Criar Conta 🧪</h1>
+            <p className="text-zinc-500 text-base italic">Junte-se à elite dos créditos IMVU.</p>
           </div>
 
-          <div className="space-y-4 mb-8">
+          <div className="space-y-4 mb-10">
             <Button 
               type="button" 
-              className="w-full h-12 bg-white text-black hover:bg-zinc-200"
+              className="w-full h-14 bg-white text-black hover:bg-zinc-200 text-base font-bold"
               onClick={handleGoogleSignIn}
               isLoading={googleLoading}
             >
-              <Chrome className="mr-2 h-5 w-5" /> ENTRAR COM O GOOGLE
+              <Chrome className="mr-3 h-6 w-6" /> ENTRAR COM O GOOGLE
             </Button>
             
             <div className="relative">
@@ -121,26 +121,28 @@ export default function Register() {
                 <span className="w-full border-t border-zinc-800" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-zinc-950 px-2 text-zinc-500">ou preencha os dados</span>
+                <span className="bg-[#09090b] px-4 text-zinc-500">ou preencha os dados</span>
               </div>
             </div>
           </div>
 
-          <form onSubmit={handleRegister} className="space-y-4">
+          <form onSubmit={handleRegister} className="space-y-5">
             <Input
               label="Nome Completo"
               placeholder="Ex: Ronilson de Souza"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
+              className="text-lg"
             />
             <Input
               label="E-mail"
               type="email"
-              placeholder="exemplo@email.com"
+              placeholder="seu@email.com"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required
+              className="text-lg"
             />
             <Input
               label="IMVU Nick"
@@ -148,6 +150,7 @@ export default function Register() {
               value={formData.imvu_nick}
               onChange={(e) => setFormData({ ...formData, imvu_nick: e.target.value })}
               required
+              className="text-lg"
             />
             <Input
               label="Senha"
@@ -156,20 +159,21 @@ export default function Register() {
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               required
+              className="text-lg"
             />
 
             {error && (
-              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-xs italic text-center">
+              <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm italic font-medium text-center">
                 {error}
               </div>
             )}
 
-            <Button type="submit" className="w-full h-14 text-lg font-bold uppercase italic" variant="neon" isLoading={loading}>
-              <UserPlus className="mr-2 h-5 w-5" /> CADASTRAR CONTA
+            <Button type="submit" className="w-full h-16 text-lg font-black uppercase italic tracking-wide" variant="neon" isLoading={loading}>
+              <UserPlus className="mr-3 h-6 w-6" /> CADASTRAR CONTA
             </Button>
           </form>
 
-          <p className="mt-8 text-center text-sm text-zinc-500">
+          <p className="mt-10 text-center text-base text-zinc-500">
             Já tem uma conta?{' '}
             <Link to="/login" className="text-neon-green hover:underline font-bold">
               Faça login

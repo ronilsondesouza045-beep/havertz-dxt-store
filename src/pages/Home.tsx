@@ -1,13 +1,31 @@
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Link } from 'react-router-dom';
-import { CheckCircle2, ShieldCheck, Zap, HelpCircle, Star, ArrowRight } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, Zap, HelpCircle, Star, ArrowRight, MessageSquare } from 'lucide-react';
 import { MainLayout } from '../layouts/MainLayout';
 import { NoticeSection } from '../components/ui/InfoSection';
+import { ReviewList } from '../components/reviews/ReviewList';
+import { db } from '../lib/firebase';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { Review } from '../types';
 
 export default function Home() {
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(true);
+
+  useEffect(() => {
+    const q = query(collection(db, 'reviews'), orderBy('created_at', 'desc'), limit(3));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Review[];
+      setReviews(data);
+      setLoadingReviews(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const benefits = [
     {
       icon: <Zap className="h-6 w-6 text-neon-green" />,
@@ -41,38 +59,33 @@ export default function Home() {
     }
   ];
 
-  const reviews = [
-    { name: 'Lucas S.', text: 'Entrega rápida e atendimento muito bom pelo whats.', stars: 5 },
-    { name: 'Ana Paula', text: 'Comprei 50k e chegou tudo certinho em menos de 30 min.', stars: 5 },
-    { name: 'Victor M.', text: 'Preço justo e confiança 100%. Recomendo.', stars: 4 }
-  ];
-
   return (
     <MainLayout>
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 px-4">
+      <section className="relative overflow-hidden py-16 md:py-32 px-4">
         <div className="container mx-auto text-center relative z-10">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.8, type: 'spring', damping: 20 }}
+            className="space-y-8"
           >
-            <Badge variant="neon" className="mb-6">SISTEMA PREMIUM V1.0</Badge>
-            <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-white mb-6 uppercase italic">
-              ⚫🧪 HAVERTZ<span className="text-neon-green">.DXT</span> — CRÉDITOS IMVU 🧪⚫
+            <Badge variant="neon" className="px-6 py-2 text-xs md:text-sm font-black italic tracking-widest bg-zinc-900 border border-zinc-700 shadow-xl shadow-black ring-4 ring-zinc-950">PLATAFORMA ELITE V3.2</Badge>
+            <h1 className="text-4xl sm:text-5xl md:text-8xl font-black tracking-tighter text-white mb-6 uppercase italic leading-[0.9] drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+              ⚫🧪 HAVERTZ<span className="text-neon-green">.DXT</span> <br className="hidden md:block" /> CRÉDITOS IMVU 🧪⚫
             </h1>
-            <p className="text-xl md:text-2xl text-zinc-400 mb-10 max-w-2xl mx-auto font-mono">
-              Rotina limpa. Execução precisa. Resultado inevitável.
+            <p className="text-lg md:text-3xl text-zinc-500 mb-12 max-w-3xl mx-auto font-black italic tracking-tight opacity-80 leading-tight">
+              Rotina limpa. Execução precisa. <br className="hidden sm:block" /> Resultado inevitável.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link to="/loja">
-                <Button variant="neon" size="lg" className="w-full sm:w-auto h-14 px-10 text-lg uppercase italic font-bold">
-                  Comprar Via Direto
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4">
+              <Link to="/loja" className="w-full sm:w-auto overflow-hidden rounded-[1.5rem] shadow-2xl shadow-neon-green/20">
+                <Button variant="neon" size="lg" className="w-full sm:w-auto h-20 md:h-16 px-12 text-xl md:text-lg font-black uppercase italic tracking-widest ring-4 ring-zinc-950">
+                  VIA DIRETO ⚡
                 </Button>
               </Link>
-              <Link to="/loja">
-                <Button variant="neon-purple" size="lg" className="w-full sm:w-auto h-14 px-10 text-lg uppercase italic font-bold">
-                  Comprar Via Presente
+              <Link to="/loja" className="w-full sm:w-auto overflow-hidden rounded-[1.5rem] shadow-2xl shadow-neon-purple/20">
+                <Button variant="neon-purple" size="lg" className="w-full sm:w-auto h-20 md:h-16 px-12 text-xl md:text-lg font-black uppercase italic tracking-widest ring-4 ring-zinc-950">
+                  VIA PRESENTE 🎁
                 </Button>
               </Link>
             </div>
@@ -110,23 +123,58 @@ export default function Home() {
             </div>
 
             <div>
-              <h2 className="text-3xl font-bold text-white mb-10 flex items-center gap-3">
-                <Star className="text-neon-purple" /> O que dizem nossos clientes
-              </h2>
-              <div className="grid grid-cols-1 gap-6">
-                {reviews.map((review, i) => (
-                  <div key={i}>
-                    <Card className="bg-zinc-900/20 border-zinc-900">
-                      <div className="flex items-center gap-1 mb-3">
-                        {[...Array(review.stars)].map((_, i) => (
-                          <Star key={i} className="h-3 w-3 fill-neon-green text-neon-green" />
-                        ))}
-                      </div>
-                      <p className="text-sm text-zinc-400 mb-4 italic">"{review.text}"</p>
-                      <p className="text-xs font-bold text-white uppercase">{review.name}</p>
-                    </Card>
+              <div className="flex items-center justify-between mb-10">
+                <h2 className="text-3xl font-bold text-white flex items-center gap-3">
+                  <Star className="text-neon-purple" /> O que dizem nossos clientes
+                </h2>
+                <Link to="/avaliacoes">
+                  <Button variant="ghost" size="sm" className="text-zinc-500 hover:text-white uppercase italic font-black text-[10px] tracking-widest">
+                    Ver Todos <ArrowRight className="ml-1 h-3 w-3" />
+                  </Button>
+                </Link>
+              </div>
+              <div className="space-y-6">
+                {loadingReviews ? (
+                  <div className="flex flex-col gap-4">
+                    {[1, 2, 3].map(i => <div key={i} className="h-32 bg-zinc-900/50 rounded-2xl animate-pulse" />)}
                   </div>
-                ))}
+                ) : reviews.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-6">
+                    {reviews.map((review, i) => (
+                      <motion.div
+                        key={review.id}
+                        initial={{ opacity: 0, x: 20 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.1 }}
+                      >
+                        <Card className="bg-zinc-900/20 border-zinc-900 p-6 relative overflow-hidden group">
+                          <div className="flex items-center gap-1 mb-3">
+                            {[...Array(5)].map((_, i) => (
+                              <Star key={i} size={12} className={i < review.rating ? "fill-neon-green text-neon-green" : "fill-zinc-800 text-zinc-800"} />
+                            ))}
+                          </div>
+                          <p className="text-sm text-zinc-400 mb-4 italic leading-relaxed">"{review.comment}"</p>
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-black text-white uppercase italic tracking-tighter">{review.user_name}</p>
+                            <Badge variant="outline" className="text-[8px] border-zinc-800 uppercase text-zinc-600">{review.category}</Badge>
+                          </div>
+                        </Card>
+                      </motion.div>
+                    ))}
+                    <Link to="/avaliacoes">
+                      <Button variant="outline" className="w-full border-zinc-900 text-zinc-500 hover:text-white hover:bg-zinc-900 py-6 border-dashed">
+                        DEIXAR MINHA AVALIAÇÃO <MessageSquare className="ml-2 h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <Card className="p-12 text-center border-dashed border-zinc-800 bg-zinc-900/10">
+                    <p className="text-zinc-500 italic mb-6">Nenhuma avaliação ainda. Seja o primeiro!</p>
+                    <Link to="/avaliacoes">
+                      <Button variant="neon" size="sm">DEIXAR AVALIAÇÃO</Button>
+                    </Link>
+                  </Card>
+                )}
               </div>
             </div>
           </div>
@@ -136,25 +184,28 @@ export default function Home() {
       {/* CTA Section */}
       <section className="py-24 px-4">
         <div className="container mx-auto">
-          <div className="relative rounded-3xl overflow-hidden bg-zinc-900/40 border border-zinc-800 p-12 text-center">
+          <div className="relative rounded-[3rem] overflow-hidden bg-zinc-950 border border-zinc-900 p-10 md:p-20 text-center shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)]">
             <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-from)_0%,_transparent_70%)] from-neon-green/5 pointer-events-none" />
-            <h2 className="text-4xl font-bold text-white mb-6">Pronto para elevar sua conta?</h2>
-            <p className="text-zinc-500 mb-10 max-w-xl mx-auto italic">
-              Seja VIP no IMVU com os melhores preços do mercado e segurança garantida pela HAVERTZ.DXT.
+            <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-neon-purple/10 blur-[100px] rounded-full pointer-events-none" />
+            
+            <Badge variant="outline" className="mb-8 border-zinc-800 text-zinc-500 px-4 py-1 font-black italic tracking-[0.3em]">READY TO LEVEL UP</Badge>
+            <h2 className="text-4xl md:text-6xl font-black text-white mb-6 uppercase italic tracking-tighter leading-none">Pronto para elevar <br className="hidden md:block" /> sua conta imvu?</h2>
+            <p className="text-zinc-500 mb-12 max-w-xl mx-auto italic text-lg font-medium opacity-80 leading-relaxed">
+              Torne-se VIP com os melhores preços do mercado <br className="hidden sm:block" /> e segurança garantida pela elite HAVERTZ.DXT.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link to="/loja">
-                <Button variant="neon" size="lg" className="h-14 px-12 text-lg font-bold">
-                  ABRIR LOJA AGORA <ArrowRight className="ml-2 h-5 w-5" />
+            <div className="flex flex-col md:flex-row items-center justify-center gap-6">
+              <Link to="/loja" className="w-full md:w-auto">
+                <Button variant="neon" size="lg" className="h-20 md:h-16 w-full md:px-14 text-xl md:text-lg font-black italic uppercase tracking-widest shadow-2xl shadow-neon-green/20">
+                  ABRIR LABORATÓRIO <ArrowRight className="ml-3 h-6 w-6" />
                 </Button>
               </Link>
               <Button 
                 variant="outline" 
                 size="lg" 
-                className="h-14 px-12 text-lg font-bold border-green-500/50 text-green-500 hover:bg-green-500/10"
+                className="h-20 md:h-16 w-full md:px-14 text-xl md:text-lg font-black italic uppercase tracking-widest border-2 border-zinc-800 hover:bg-zinc-900"
                 onClick={() => window.open('https://w.app/cgfqyj', '_blank')}
               >
-                SUPORTE WHATSAPP
+                WHATSAPP ELITE
               </Button>
             </div>
           </div>

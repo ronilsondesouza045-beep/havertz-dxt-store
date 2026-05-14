@@ -95,143 +95,164 @@ export default function UserOrders() {
 
   return (
     <MainLayout>
-      <div className="container mx-auto py-12 px-4">
+      <div className="container mx-auto py-8 md:py-12 px-4">
         <div className="max-w-4xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+          <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6 text-center md:text-left">
             <div>
-              <h1 className="text-3xl font-black text-white italic uppercase">
+              <h1 className="text-3xl md:text-4xl font-black text-white italic uppercase tracking-tighter">
                 Meus Pedidos 🧪
               </h1>
-              <p className="text-zinc-500 text-sm italic mt-1">Histórico de injeções de créditos.</p>
+              <p className="text-zinc-500 text-base italic mt-1 font-medium">Histórico de injeções de créditos.</p>
             </div>
-            <Link to="/loja">
-              <Button variant="neon" size="sm">Novo Pedido</Button>
+            <Link to="/loja" className="w-full md:w-auto">
+              <Button variant="neon" size="lg" className="w-full md:w-auto h-14 md:h-12 font-black italic tracking-widest px-8">
+                FAZER NOVO PEDIDO
+              </Button>
             </Link>
           </div>
 
           {loading ? (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {[1, 2, 3].map(i => (
-                <div key={i} className="h-24 w-full bg-zinc-900/50 animate-pulse rounded-xl" />
+                <div key={i} className="h-40 w-full bg-zinc-900/50 animate-pulse rounded-2xl border border-zinc-800" />
               ))}
             </div>
           ) : orders.length === 0 ? (
-            <Card className="p-12 text-center">
-              <div className="h-16 w-16 bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-6 text-zinc-600">
-                <Package size={32} />
+            <Card className="p-12 md:p-20 text-center border-dashed border-zinc-800 bg-zinc-900/10">
+              <div className="h-20 w-20 bg-zinc-900 rounded-3xl flex items-center justify-center mx-auto mb-8 text-zinc-600 border border-zinc-800 shadow-xl shadow-black ring-4 ring-zinc-900/50">
+                <Package size={40} />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">Nenhum pedido encontrado</h3>
-              <p className="text-zinc-500 mb-8 max-w-xs mx-auto">Você ainda não realizou nenhuma compra de créditos.</p>
+              <h3 className="text-2xl font-black text-white mb-3 italic tracking-tighter">NENHUM PEDIDO AINDA</h3>
+              <p className="text-zinc-500 mb-10 max-w-sm mx-auto text-base italic">Você ainda não realizou nenhuma compra de créditos em nosso sistema premium.</p>
               <Link to="/loja">
-                <Button variant="outline">Ir para a Loja</Button>
+                <Button variant="outline" size="lg" className="px-10 h-14 font-black italic">IR PARA A LOJA 🧪</Button>
               </Link>
             </Card>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {orders.map((order, i) => (
                 <motion.div
                   key={order.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05, type: 'spring', damping: 20 }}
                 >
-                  <Card className="hover:border-zinc-700 transition-all p-0 overflow-hidden">
-                    <div className="flex flex-col sm:flex-row">
-                       <div className="p-6 flex-1">
-                          <div className="flex flex-wrap items-center gap-3 mb-4">
-                            <Badge variant="default" className="text-[10px]">
-                               <Hash className="h-3 w-3 mr-1" /> {order.order_code}
-                            </Badge>
-                            <Badge variant={getStatusColor(order.status)}>
-                               {order.status}
-                            </Badge>
-                            <span className="text-xs text-zinc-600 font-mono">
-                               {safeDate(order.created_at).toLocaleDateString('pt-BR')}
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center gap-4">
-                             <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${order.product_type === 'DIRETO' ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-purple/10 text-neon-purple'}`}>
-                                {order.product_type === 'DIRETO' ? <Package size={20} /> : <Clock size={20} />}
+                  <Card className="hover:border-zinc-500 transition-all p-0 overflow-hidden bg-zinc-950/80 backdrop-blur-sm shadow-xl shadow-black/50 group border-zinc-800">
+                    <div className="flex flex-col">
+                       {/* Header of the Card */}
+                       <div className="p-5 md:p-6 flex flex-wrap items-center justify-between gap-4 border-b border-zinc-900 bg-zinc-900/20">
+                          <div className="flex items-center gap-3">
+                             <div className="flex items-center gap-2 bg-zinc-950 px-3 py-1.5 rounded-lg border border-zinc-800 shadow-inner">
+                                <Hash className="h-3 w-3 text-neon-green" />
+                                <span className="text-xs font-black text-zinc-300 font-mono tracking-tighter">{order.order_code}</span>
                              </div>
-                             <div>
-                                <h4 className="text-white font-bold text-lg">
-                                   {order.product_name}
-                                </h4>
-                                <div className="flex flex-col gap-1">
-                                   <p className="text-xs text-zinc-500 italic uppercase">
-                                      {order.product_category === 'credits' ? `Via ${order.product_type}` : order.product_category}
-                                   </p>
-                                   {/* Identification Details */}
-                                   {(order.imvu_nick || order.player_id || order.player_nick || order.instagram_handle || order.access_email) && (
-                                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-                                        {order.imvu_nick && (
-                                          <p className="text-[10px] text-zinc-400 capitalize">
-                                            <span className="font-bold text-zinc-500 uppercase mr-1">IMVU:</span> {order.imvu_nick}
-                                          </p>
-                                        )}
-                                        {order.player_id && (
-                                          <p className="text-[10px] text-zinc-400">
-                                            <span className="font-bold text-zinc-500 uppercase mr-1">ID:</span> {order.player_id}
-                                          </p>
-                                        )}
-                                        {order.player_nick && (
-                                          <p className="text-[10px] text-zinc-400">
-                                            <span className="font-bold text-zinc-500 uppercase mr-1">Nick:</span> {order.player_nick}
-                                          </p>
-                                        )}
-                                        {order.instagram_handle && (
-                                          <p className="text-[10px] text-zinc-400">
-                                            <span className="font-bold text-zinc-500 uppercase mr-1">IG:</span> @{order.instagram_handle.replace('@', '')}
-                                          </p>
-                                        )}
-                                        {order.access_email && (
-                                          <p className="text-[10px] text-zinc-400">
-                                            <span className="font-bold text-zinc-500 uppercase mr-1">Acesso:</span> {order.access_email}
-                                          </p>
-                                        )}
-                                     </div>
-                                   )}
-                                   {order.notes && (
-                                     <p className="text-[10px] text-zinc-500 italic mt-1 line-clamp-1 max-w-md">
-                                        <span className="font-bold uppercase mr-1">Obs:</span> {order.notes}
-                                     </p>
-                                   )}
-                                </div>
-                             </div>
+                             <span className="text-[10px] text-zinc-600 font-black uppercase tracking-widest italic">
+                                {safeDate(order.created_at).toLocaleDateString('pt-BR')}
+                             </span>
                           </div>
+                          <Badge variant={getStatusColor(order.status)} className="px-3 py-1 text-xs font-black italic uppercase tracking-wider">
+                             {order.status}
+                          </Badge>
                        </div>
 
-                       <div className="bg-zinc-950 p-6 flex flex-col justify-between items-end w-full sm:w-64 border-t sm:border-t-0 sm:border-l border-zinc-900 gap-4">
-                          <div className="flex flex-col items-end w-full">
-                             <span className="text-2xl font-black text-white italic">{formatCurrency(order.total_price)}</span>
-                             <div className="flex items-center gap-4">
-                                <Link to={`/account/orders/${order.id}`}>
-                                   <Button variant="ghost" size="sm" className="text-[10px] h-8 hover:text-neon-green uppercase font-black px-0">
-                                      Ver Detalhes <ChevronRight size={12} className="ml-1" />
+                       <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-zinc-900">
+                          <div className="p-6 md:p-8 flex-1 space-y-6">
+                             <div className="flex items-start gap-5">
+                                <div className={`h-16 w-16 md:h-14 md:w-14 shrink-0 rounded-2xl flex items-center justify-center border-2 shadow-lg transition-transform group-hover:scale-105 ${
+                                  order.product_type === 'DIRETO' 
+                                    ? 'bg-neon-green/10 text-neon-green border-neon-green/20 shadow-neon-green/5' 
+                                    : 'bg-neon-purple/10 text-neon-purple border-neon-purple/20 shadow-neon-purple/5'
+                                }`}>
+                                   {order.product_type === 'DIRETO' ? <Package size={32} /> : <Clock size={32} />}
+                                </div>
+                                <div className="space-y-1">
+                                   <h4 className="text-white font-black text-xl md:text-2xl italic tracking-tighter group-hover:text-neon-green transition-colors leading-tight">
+                                      {order.product_name}
+                                   </h4>
+                                   <p className="text-xs md:text-sm text-zinc-500 italic uppercase font-black tracking-widest opacity-80">
+                                      {order.product_category === 'credits' ? `Via ${order.product_type}` : order.product_category.replace('_', ' ')}
+                                   </p>
+                                </div>
+                             </div>
+                             
+                             {/* Identification Details */}
+                             {(order.imvu_nick || order.player_id || order.player_nick || order.instagram_handle || order.access_email) && (
+                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 p-4 rounded-2xl bg-zinc-900/40 border border-zinc-800/50">
+                                  {order.imvu_nick && (
+                                    <div className="flex flex-col">
+                                       <span className="text-[10px] text-zinc-600 font-black uppercase tracking-widest">IMVU Avatar</span>
+                                       <span className="text-sm text-zinc-300 font-bold italic tracking-tight">{order.imvu_nick}</span>
+                                    </div>
+                                  )}
+                                  {order.player_id && (
+                                    <div className="flex flex-col">
+                                       <span className="text-[10px] text-zinc-600 font-black uppercase tracking-widest">Player ID</span>
+                                       <span className="text-sm text-zinc-300 font-bold italic tracking-tight">{order.player_id}</span>
+                                    </div>
+                                  )}
+                                  {order.player_nick && (
+                                    <div className="flex flex-col">
+                                       <span className="text-[10px] text-zinc-600 font-black uppercase tracking-widest">Nick Jogo</span>
+                                       <span className="text-sm text-zinc-300 font-bold italic tracking-tight">{order.player_nick}</span>
+                                    </div>
+                                  )}
+                                  {order.instagram_handle && (
+                                    <div className="flex flex-col">
+                                       <span className="text-[10px] text-zinc-600 font-black uppercase tracking-widest">Instagram</span>
+                                       <span className="text-sm text-zinc-300 font-bold italic tracking-tight underline">@{order.instagram_handle.replace('@', '')}</span>
+                                    </div>
+                                  )}
+                                  {order.access_email && (
+                                    <div className="flex flex-col">
+                                       <span className="text-[10px] text-zinc-600 font-black uppercase tracking-widest">Conta Acesso</span>
+                                       <span className="text-sm text-zinc-300 font-bold italic tracking-tight truncate">{order.access_email}</span>
+                                    </div>
+                                  )}
+                               </div>
+                             )}
+
+                             {order.notes && (
+                               <div className="p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-xl italic">
+                                  <p className="text-xs text-yellow-500/80 font-black uppercase mb-1 tracking-widest">Observação</p>
+                                  <p className="text-sm text-zinc-400 font-medium tracking-tight leading-relaxed line-clamp-2">"{order.notes}"</p>
+                               </div>
+                             )}
+                          </div>
+
+                          <div className="bg-zinc-950/50 p-6 md:p-8 flex flex-col justify-between items-center md:items-end w-full md:w-72 space-y-6">
+                             <div className="text-center md:text-right w-full space-y-1">
+                                <span className="text-xs text-zinc-600 uppercase font-black tracking-widest">Valor do Investimento</span>
+                                <h3 className="text-3xl md:text-4xl font-black text-neon-green italic tracking-tighter drop-shadow-[0_0_15px_rgba(57,255,20,0.1)]">
+                                   {formatCurrency(order.total_price)}
+                                </h3>
+                             </div>
+
+                             <div className="flex flex-col gap-3 w-full">
+                                <Link to={`/account/orders/${order.id}`} className="w-full">
+                                   <Button variant="neon" size="lg" className="w-full h-14 text-sm font-black italic uppercase tracking-widest shadow-lg shadow-black">
+                                      VER DETALHES <ChevronRight size={18} className="ml-2" />
                                    </Button>
                                 </Link>
+
+                                {order.status === 'aguardando comprovante' && (
+                                  <Button 
+                                    className="w-full bg-zinc-100 hover:bg-white text-black font-black italic uppercase text-xs h-14 border-none shadow-xl transition-all active:scale-95"
+                                    onClick={() => window.open('https://www.instagram.com/havertz.dxt/', '_blank')}
+                                  >
+                                    🚀 ENVIAR COMPROVANTE
+                                  </Button>
+                                )}
+
                                 <Button 
                                   variant="ghost" 
-                                  size="sm" 
-                                  className="text-[10px] h-8 text-zinc-600 hover:text-red-500 uppercase font-black px-0"
+                                  size="md" 
+                                  className="w-full h-12 text-zinc-600 hover:text-red-500 hover:bg-red-500/10 text-xs font-black uppercase tracking-tighter italic border border-transparent hover:border-red-500/20"
                                   onClick={() => setDeletingOrder(order)}
                                 >
-                                   <Trash2 size={12} className="mr-1" /> Excluir
+                                   <Trash2 size={16} className="mr-2" /> Excluir Pedido
                                 </Button>
                              </div>
                           </div>
-
-                          {order.status === 'aguardando comprovante' && (
-                            <div className="flex flex-col gap-2 w-full">
-                              <Button 
-                                className="w-full bg-[#E1306C] hover:bg-[#C13584] text-white font-black italic uppercase text-[8px] h-8 border-none"
-                                onClick={() => window.open('https://www.instagram.com/havertz.dxt/', '_blank')}
-                              >
-                                Enviar no Instagram
-                              </Button>
-                            </div>
-                          )}
                        </div>
                     </div>
                   </Card>

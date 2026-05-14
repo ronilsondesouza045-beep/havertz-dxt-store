@@ -45,6 +45,14 @@ service cloud.firestore {
              (data.get('message', '') is string && data.get('message', '').size() <= 10000);
     }
 
+    function isValidReview(data) {
+      return data.get('user_id', '') == request.auth.uid &&
+             data.get('rating', 0) is number && data.get('rating', 0) >= 1 && data.get('rating', 0) <= 5 &&
+             data.get('category', '') is string && data.get('category', '').size() <= 64 &&
+             data.get('comment', '') is string && data.get('comment', '').size() <= 1000 &&
+             data.get('user_name', '') is string && data.get('user_name', '').size() <= 128;
+    }
+
     // --- Matches ---
 
     match /profiles/{userId} {
@@ -114,6 +122,15 @@ service cloud.firestore {
     match /settings/{settingId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if resource.data.get('is_visible', true) == true || isAdmin() || (isSignedIn() && resource.data.user_id == request.auth.uid);
+      allow create: if isSignedIn() && isValidReview(incoming()) && incoming().get('is_visible', true) == true;
+      allow update: if (isAdmin() || (isSignedIn() && existing().user_id == request.auth.uid)) && 
+                       isValidReview(incoming()) &&
+                       (isAdmin() || incoming().diff(existing()).affectedKeys().hasOnly(['rating', 'category', 'comment', 'updated_at', 'is_visible']));
+      allow delete: if isAdmin() || (isSignedIn() && existing().user_id == request.auth.uid);
     }
   }
 }

@@ -168,7 +168,7 @@ export function SupportChat() {
 
       const newConvRef = await addDoc(collection(db, 'support_conversations'), newConvData);
       
-      const newConv = { id: newConvRef.id, ...newConvData } as Conversation;
+      const newConv = { id: newConvRef.id, ...newConvData } as any as Conversation;
       setConversation(newConv);
       localStorage.setItem('havertz_chat_conv_id', newConv.id);
 

@@ -13,6 +13,7 @@ import Services from './pages/Services';
 import MNProducts from './pages/MNProducts';
 import FreeFire from './pages/FreeFire';
 import Followers from './pages/Followers';
+import Reviews from './pages/Reviews';
 import Checkout from './pages/Checkout';
 import UserOrders from './pages/account/Orders';
 import OrderDetails from './pages/account/OrderDetails';
@@ -21,6 +22,7 @@ import AccountSupport from './pages/account/Support';
 import Terms from './pages/Terms';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminOrders from './pages/admin/Orders';
+import AdminReviews from './pages/admin/Reviews';
 import AdminSettings from './pages/admin/Settings';
 import AdminSupportChat from './pages/admin/SupportChat';
 import NotFound from './pages/NotFound';
@@ -41,6 +43,7 @@ export default function App() {
           <Route path="/produtos-mn" element={<MNProducts />} />
           <Route path="/free-fire" element={<FreeFire />} />
           <Route path="/seguidores" element={<Followers />} />
+          <Route path="/avaliacoes" element={<Reviews />} />
           <Route path="/terms" element={<Terms />} />
 
           {/* Protected Client Routes */}
@@ -56,6 +59,7 @@ export default function App() {
           <Route element={<AdminRoute />}>
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/pedidos" element={<AdminOrders />} />
+            <Route path="/admin/avaliacoes" element={<AdminReviews />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/admin/chat" element={<AdminSupportChat />} />
           </Route>

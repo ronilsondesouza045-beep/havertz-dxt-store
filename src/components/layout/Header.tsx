@@ -17,6 +17,7 @@ export function Header() {
     { label: 'Produtos MN', path: '/produtos-mn' },
     { label: 'Free Fire', path: '/free-fire' },
     { label: 'Seguidores', path: '/seguidores' },
+    { label: 'Avaliações', path: '/avaliacoes' },
   ];
 
   if (user) {
@@ -24,7 +25,8 @@ export function Header() {
     navLinks.push({ label: 'Meus Pedidos', path: '/account/orders' });
     if (isAdmin) {
       navLinks.push({ label: 'Admin', path: '/admin' });
-      navLinks.push({ label: 'Chat Admin', path: '/admin/chat' });
+      navLinks.push({ label: 'Chats', path: '/admin/chat' });
+      navLinks.push({ label: 'Reviews Admin', path: '/admin/avaliacoes' });
     }
   }
 
@@ -82,68 +84,83 @@ export function Header() {
 
         {/* Mobile menu button */}
         <button
-          className="md:hidden text-zinc-400 hover:text-white"
+          className="md:hidden p-2 text-zinc-400 hover:text-white transition-colors"
           onClick={() => setIsOpen(!isOpen)}
+          aria-label={isOpen ? "Fechar menu" : "Abrir menu"}
         >
-          {isOpen ? <X /> : <Menu />}
+          {isOpen ? <X size={28} /> : <Menu size={28} />}
         </button>
       </div>
 
       {/* Mobile Nav */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="absolute top-16 left-0 w-full border-b border-zinc-800 bg-dark-bg p-4 md:hidden"
-          >
-            <div className="flex flex-col space-y-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  onClick={() => setIsOpen(false)}
-                  className={`text-lg font-medium ${
-                    location.pathname === link.path ? 'text-neon-green' : 'text-zinc-400'
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <hr className="border-zinc-800" />
-              {user ? (
-                <div className="flex flex-col space-y-2">
-                  <Link to="/account" onClick={() => setIsOpen(false)}>
-                    <Button className="w-full justify-start space-x-2" variant="ghost">
-                      <User className="h-4 w-4" />
-                      <span>Minha Conta</span>
-                    </Button>
-                  </Link>
-                  <Button
-                    className="w-full justify-start space-x-2"
-                    variant="ghost"
-                    onClick={() => {
-                      signOut();
-                      setIsOpen(false);
-                    }}
-                  >
-                    <LogOut className="h-4 w-4" />
-                    <span>Sair</span>
-                  </Button>
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 top-16 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+              onClick={() => setIsOpen(false)}
+            />
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed right-0 top-16 z-50 h-[calc(100vh-64px)] w-4/5 max-w-sm border-l border-zinc-800 bg-zinc-950 p-6 shadow-2xl md:hidden"
+            >
+              <div className="flex flex-col h-full">
+                <div className="flex-1 space-y-2 overflow-y-auto pb-6">
+                  {navLinks.map((link) => (
+                    <Link
+                      key={link.path}
+                      to={link.path}
+                      onClick={() => setIsOpen(false)}
+                      className={`flex items-center rounded-xl px-4 py-4 text-lg font-medium transition-colors active:bg-zinc-900 ${
+                        location.pathname === link.path ? 'bg-neon-green/10 text-neon-green' : 'text-zinc-400'
+                      }`}
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
                 </div>
-              ) : (
-                <div className="flex flex-col space-y-2">
-                  <Link to="/login" onClick={() => setIsOpen(false)}>
-                    <Button className="w-full" variant="outline">Entrar</Button>
-                  </Link>
-                  <Link to="/register" onClick={() => setIsOpen(false)}>
-                    <Button className="w-full" variant="neon">Criar Conta</Button>
-                  </Link>
+                
+                <div className="space-y-4 border-t border-zinc-800 pt-6">
+                  {user ? (
+                    <div className="flex flex-col space-y-3">
+                      <Link to="/account" onClick={() => setIsOpen(false)}>
+                        <Button className="w-full justify-start py-4 text-base" variant="ghost">
+                          <User className="mr-3 h-5 w-5" />
+                          <span>Minha Conta</span>
+                        </Button>
+                      </Link>
+                      <Button
+                        className="w-full justify-start py-4 text-base text-red-400 hover:text-red-300"
+                        variant="ghost"
+                        onClick={() => {
+                          signOut();
+                          setIsOpen(false);
+                        }}
+                      >
+                        <LogOut className="mr-3 h-5 w-5" />
+                        <span>Sair da Conta</span>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col space-y-3">
+                      <Link to="/login" onClick={() => setIsOpen(false)}>
+                        <Button className="w-full py-4 text-base" variant="outline">Entrar</Button>
+                      </Link>
+                      <Link to="/register" onClick={() => setIsOpen(false)}>
+                        <Button className="w-full py-4 text-base" variant="neon">Criar Conta</Button>
+                      </Link>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </motion.div>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </header>

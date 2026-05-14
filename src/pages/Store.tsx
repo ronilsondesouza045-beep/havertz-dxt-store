@@ -32,35 +32,35 @@ export default function Store() {
 
   return (
     <MainLayout>
-      <div className="container mx-auto py-12 px-4">
-        <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-black text-white italic mb-4 uppercase tracking-tighter text-glow">
-            ⚫🧪 LABORATÓRIO DE CRÉDITOS 🧪⚫
+      <div className="container mx-auto py-8 md:py-12 px-4">
+        <div className="text-center mb-10 md:mb-16">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-black text-white italic mb-4 uppercase tracking-tighter text-glow leading-tight">
+            ⚫🧪 LABORATÓRIO <br className="sm:hidden" /> DE CRÉDITOS 🧪⚫
           </h1>
-          <p className="text-zinc-500 max-w-2xl mx-auto italic">
+          <p className="text-zinc-500 max-w-2xl mx-auto italic text-base md:text-lg">
             Escolha o método de injeção elite para sua conta IMVU.
           </p>
         </div>
 
         {/* Tabs */}
-        <div className="flex justify-center mb-12">
-          <div className="inline-flex p-1 bg-zinc-900 border border-zinc-800 rounded-xl">
+        <div className="flex justify-center mb-10 md:mb-12">
+          <div className="flex w-full max-w-md p-1.5 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-xl shadow-black">
             <button
               onClick={() => setTab('DIRETO')}
-              className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold uppercase transition-all ${
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-4 rounded-xl text-xs md:text-sm font-black uppercase transition-all ${
                 tab === 'DIRETO' 
-                  ? 'bg-neon-green text-black shadow-[0_0_15px_rgba(57,255,20,0.3)]' 
-                  : 'text-zinc-500 hover:text-white'
+                  ? 'bg-zinc-100 text-black shadow-[0_0_20px_rgba(255,255,255,0.1)]' 
+                  : 'text-zinc-500 hover:text-white active:bg-zinc-800'
               }`}
             >
               <Zap className="h-4 w-4" /> Via Direto
             </button>
             <button
               onClick={() => setTab('PRESENTE')}
-              className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold uppercase transition-all ${
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-4 rounded-xl text-xs md:text-sm font-black uppercase transition-all ${
                 tab === 'PRESENTE' 
-                  ? 'bg-neon-purple text-white shadow-[0_0_15px_rgba(188,19,254,0.3)]' 
-                  : 'text-zinc-500 hover:text-white'
+                  ? 'bg-neon-purple text-white shadow-[0_0_20px_rgba(188,19,254,0.3)]' 
+                  : 'text-zinc-500 hover:text-white active:bg-zinc-800'
               }`}
             >
               <Gift className="h-4 w-4" /> Via Presente
@@ -69,81 +69,83 @@ export default function Store() {
         </div>
 
         {/* Method Info */}
-        <div className="max-w-4xl mx-auto mb-16">
+        <div className="max-w-4xl mx-auto mb-10 md:mb-16">
            <AnimatePresence mode="wait">
              <motion.div
                key={tab}
                initial={{ opacity: 0, y: 10 }}
                animate={{ opacity: 1, y: 0 }}
                exit={{ opacity: 0, y: -10 }}
-               className="space-y-8"
+               className="space-y-6 md:space-y-8"
              >
-                <div className="p-8 rounded-3xl bg-zinc-900/50 border border-zinc-800 flex flex-col md:flex-row items-center gap-8 backdrop-blur-md">
-                    <div className={`h-20 w-20 rounded-3xl flex items-center justify-center ${tab === 'DIRETO' ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-purple/10 text-neon-purple'}`}>
-                      {tab === 'DIRETO' ? <Zap size={40} /> : <Gift size={40} />}
+                <div className="p-6 md:p-10 rounded-[2rem] bg-zinc-950 border border-zinc-800 flex flex-col md:flex-row items-center gap-6 md:gap-10 backdrop-blur-md shadow-2xl relative overflow-hidden group">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                    <div className={`h-24 w-24 md:h-20 md:w-20 rounded-3xl flex items-center justify-center shrink-0 border-2 transition-transform group-hover:scale-105 ${tab === 'DIRETO' ? 'bg-zinc-100 text-black border-white/20' : 'bg-neon-purple/10 text-neon-purple border-neon-purple/20'}`}>
+                      {tab === 'DIRETO' ? <Zap size={48} /> : <Gift size={48} />}
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-2xl font-black text-white mb-2 uppercase italic tracking-tighter">
+                    <div className="flex-1 text-center md:text-left space-y-2">
+                      <h3 className="text-2xl md:text-3xl font-black text-white uppercase italic tracking-tighter leading-none">
                         Injeção via {tab}
                       </h3>
-                      <p className="text-zinc-400 font-medium italic">
+                      <p className="text-zinc-500 font-medium italic text-base md:text-lg">
                         {tab === 'DIRETO' 
-                          ? 'Créditos enviados diretamente ao seu nickname. Processo de alta segurança e estabilidade.' 
-                          : 'Receba seus créditos como presentes em sua wishlist. Método otimizado para economia.'}
+                          ? 'Créditos enviados diretamente ao seu nickname. Processo de alta segurança e estabilidade imbatível.' 
+                          : 'Receba seus créditos como presentes em sua wishlist. Método otimizado para máxima economia.'}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <Badge variant={tab === 'DIRETO' ? 'neon' : 'info'} className="mb-2 text-sm px-4 py-1">
+                    <div className="flex flex-col items-center md:items-end gap-1">
+                      <Badge variant={tab === 'DIRETO' ? 'default' : 'info'} className="text-lg md:text-base px-6 py-2 md:px-4 md:py-1 font-black italic">
                         {tab === 'DIRETO' ? 'R$ 2,80 / 1K' : 'R$ 1,80 / 1K'}
                       </Badge>
-                      <p className="text-[10px] text-zinc-600 uppercase font-black tracking-widest">Protocolo Manual</p>
+                      <p className="text-[10px] text-zinc-600 uppercase font-black tracking-widest mt-1">Protocolo Manual Verificado</p>
                     </div>
                 </div>
 
-                <div className="bg-zinc-900/10 p-1 rounded-[2rem] border border-zinc-900 shadow-inner">
-                   <InfoNotice notices={tab === 'DIRETO' ? directNotices : presentNotices} variant="inline" className="p-4" />
+                <div className="bg-zinc-900/10 p-2 rounded-[2.5rem] border border-zinc-900 shadow-inner">
+                   <InfoNotice notices={tab === 'DIRETO' ? directNotices : presentNotices} variant="inline" className="p-4 md:p-6" />
                 </div>
              </motion.div>
            </AnimatePresence>
         </div>
 
         {/* Product Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
           {(tab === 'DIRETO' ? PRODUCTS_DIRETO : PRODUCTS_PRESENTE).map((product, i) => (
             <motion.div
               key={product.id}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: i * 0.05 }}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05, type: 'spring', damping: 20 }}
+              className="h-full"
             >
-              <Card className="group hover:border-zinc-700 bg-zinc-950 relative overflow-hidden transition-all duration-300">
+              <Card className="h-full group hover:border-zinc-500 bg-zinc-950 relative overflow-hidden transition-all duration-500 flex flex-col p-6 md:p-8 min-h-[280px] shadow-lg shadow-black/50 border-zinc-800">
                  {/* Background decoration */}
-                 <div className={`absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover:scale-125 transition-transform duration-500 ${tab === 'DIRETO' ? 'text-neon-green' : 'text-neon-purple'}`}>
-                   {tab === 'DIRETO' ? <Zap size={80} /> : <Gift size={80} />}
+                 <div className={`absolute -top-10 -right-10 p-4 opacity-[0.03] pointer-events-none group-hover:scale-150 transition-transform duration-1000 ${tab === 'DIRETO' ? 'text-white' : 'text-neon-purple'}`}>
+                   {tab === 'DIRETO' ? <Zap size={200} /> : <Gift size={200} />}
                  </div>
 
                  {product.image_url && (
-                   <div className="absolute top-0 right-0 w-40 h-40 opacity-20 group-hover:opacity-40 transition-all duration-500 pointer-events-none grayscale group-hover:grayscale-0 scale-110 group-hover:scale-100">
+                   <div className="absolute top-0 right-0 w-32 h-32 md:w-40 md:h-40 opacity-10 group-hover:opacity-30 transition-all duration-700 pointer-events-none grayscale group-hover:grayscale-0 scale-125 group-hover:scale-100">
                      <img 
                        src={product.image_url} 
                        alt="" 
-                       className="w-full h-full object-cover rounded-bl-[4rem] border-l border-b border-white/5"
+                       className="w-full h-full object-cover rounded-bl-[4rem] border-l border-b border-white/5 shadow-2xl"
                        referrerPolicy="no-referrer"
                      />
                    </div>
                  )}
                  
-                 <div className="relative z-10">
-                   <div className="flex justify-between items-start mb-4">
-                     <div className="flex flex-col gap-1">
-                        <Badge variant={tab === 'DIRETO' ? 'neon' : 'info'} className="w-fit">SALE</Badge>
-                        <h3 className="text-4xl font-black text-white italic tracking-tighter">{product.amount_k}K</h3>
-                     </div>
+                 <div className="relative z-10 flex flex-col h-full">
+                   <div className="flex justify-between items-start mb-6">
+                      <div className="flex flex-col gap-2">
+                        <Badge variant={tab === 'DIRETO' ? 'default' : 'info'} className="w-fit text-[10px] font-black italic tracking-widest px-3 py-1">BEST SALE</Badge>
+                        <h3 className="text-5xl md:text-6xl font-black text-white italic tracking-tighter leading-none group-hover:text-neon-green transition-colors">{product.amount_k}K</h3>
+                      </div>
                    </div>
                    
-                   <div className="flex items-center gap-3 mb-6">
+                   <div className="flex items-center gap-4 mb-8 mt-auto">
                      {product.image_url && (
-                       <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl border-2 border-zinc-800 bg-zinc-900 group-hover:border-neon-purple transition-all duration-300 shadow-xl group-hover:shadow-neon-purple/20">
+                       <div className="h-14 w-14 md:h-12 md:w-12 shrink-0 overflow-hidden rounded-2xl border-2 border-zinc-800 bg-zinc-900 group-hover:border-white/20 transition-all duration-500 shadow-xl group-hover:shadow-white/5 ring-4 ring-zinc-950">
                          <img 
                            src={product.image_url} 
                            alt={product.name}
@@ -153,23 +155,23 @@ export default function Store() {
                        </div>
                      )}
                      <div>
-                        <p className="text-zinc-500 text-[10px] uppercase font-black tracking-[0.2em]">IMVU Credits</p>
-                        <p className={`text-xs font-bold uppercase ${tab === 'DIRETO' ? 'text-neon-green' : 'text-neon-purple'}`}>{tab}</p>
+                        <p className="text-zinc-500 text-[10px] uppercase font-black tracking-[0.2em] mb-0.5">Créditos IMVU</p>
+                        <p className={`text-[10px] font-black uppercase tracking-widest ${tab === 'DIRETO' ? 'text-zinc-300' : 'text-neon-purple'}`}>Protocolo {tab}</p>
                      </div>
                    </div>
                    
-                   <div className="flex items-center justify-between mt-auto pt-6 border-t border-zinc-900">
+                   <div className="flex items-center justify-between pt-6 border-t border-zinc-900/50">
                      <div className="flex flex-col">
-                       <span className="text-xs text-zinc-600 uppercase font-bold">Valor Total</span>
-                       <span className="text-2xl font-black text-white">{formatCurrency(product.price)}</span>
+                       <span className="text-[10px] text-zinc-600 uppercase font-black tracking-widest mb-1 leading-none">Preço Final</span>
+                       <span className="text-3xl md:text-2xl font-black text-white italic tracking-tighter drop-shadow-md">{formatCurrency(product.price)}</span>
                      </div>
                      <Button 
-                       variant={tab === 'DIRETO' ? 'neon' : 'neon-purple'} 
+                       variant={tab === 'DIRETO' ? 'primary' : 'neon-purple'} 
                        size="icon" 
-                       className="rounded-full h-12 w-12"
+                       className="rounded-2xl h-14 w-14 md:h-12 md:w-12 bg-zinc-100 hover:bg-white text-black shadow-lg shadow-black group-hover:scale-110 active:scale-95 transition-all"
                        onClick={() => handleBuy(product.id)}
                      >
-                       <ChevronRight />
+                       <ChevronRight size={24} />
                      </Button>
                    </div>
                  </div>

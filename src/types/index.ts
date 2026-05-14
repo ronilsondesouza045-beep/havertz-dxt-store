@@ -83,3 +83,16 @@ export interface Product {
     is_adult?: boolean;
   };
 }
+
+export interface Review {
+  id: string;
+  user_id: string;
+  user_name: string;
+  user_email: string;
+  rating: number;
+  category: string;
+  comment: string;
+  is_visible: boolean;
+  created_at: any;
+  updated_at: any;
+}

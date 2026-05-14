@@ -72,6 +72,23 @@
         "pix_key": { "type": "string" },
         "merchant_name": { "type": "string" }
       }
+    },
+    "Review": {
+      "title": "User Review",
+      "description": "Reviews and ratings from customers.",
+      "type": "object",
+      "properties": {
+        "user_id": { "type": "string" },
+        "user_name": { "type": "string" },
+        "user_email": { "type": "string", "format": "email" },
+        "rating": { "type": "number" },
+        "category": { "type": "string" },
+        "comment": { "type": "string" },
+        "is_visible": { "type": "boolean" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["user_id", "rating", "category", "comment"]
     }
   },
   "firestore": {
@@ -94,6 +111,10 @@
     "/settings/{settingId}": {
       "schema": "Setting",
       "description": "Global settings."
+    },
+    "/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Customer reviews collection."
     }
   }
 }
