@@ -7,90 +7,89 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const app = express();
+export const app = express();
 const PORT = 3000;
 
 async function getLatestNetflixCode() {
+  const user = process.env.EMAIL_USER || "souzaroni187@gmail.com";
+  const pass = (process.env.EMAIL_PASS || "tnaz mqqb ufck rygd").replace(/\s+/g, '');
+
+  console.log(`Tentando conectar ao Gmail para: ${user}`);
+
   const client = new ImapFlow({
     host: "imap.gmail.com",
     port: 993,
     secure: true,
-    auth: {
-      user: process.env.EMAIL_USER || "souzaroni187@gmail.com",
-      pass: (process.env.EMAIL_PASS || "tnaz mqqb ufck rygd").replace(/\s+/g, ''),
-    },
+    auth: { user, pass },
     logger: false,
+    clientInfo: { name: "NetflixCodeBot", version: "1.0.0" }
   });
 
   try {
     await client.connect();
+    console.log("Conectado ao IMAP com sucesso.");
     let lock = await client.getMailboxLock("INBOX");
     try {
-      // Search for emails in the last 60 minutes
-      const sixtyMinutesAgo = new Date(Date.now() - 60 * 60 * 1000);
+      // Removemos o 'since' restrito para evitar erro de Timezone no Vercel
+      // O Gmail às vezes falha se o Since for enviado de forma incompatível
+      // Buscamos as últimas 10 mensagens e filtramos manualmente
       
       let messages = await client.search({
         or: [
-          { from: "info@account.netflix.com" },
-          { from: "info@mailer.netflix.com" },
-          { from: "netflix@netflix.com" },
+          { from: "netflix.com" },
           { subject: "Netflix" }
-        ],
-        since: sixtyMinutesAgo,
+        ]
       });
 
       if (!messages || messages.length === 0) {
+        console.log("Nenhum e-mail da Netflix encontrado na busca geral.");
         return null;
       }
 
-      // Get the latest message (highest ID)
-      const lastMsgId = [...messages].sort((a, b) => Number(b) - Number(a))[0];
-      let message = await client.fetchOne(lastMsgId, { source: true });
+      // Ordenar por ID decrescente para pegar os mais novos
+      const sortedIds = [...messages].sort((a, b) => Number(b) - Number(a)).slice(0, 5);
       
-      if (!message || !message.source) {
-        return null;
-      }
+      for (const msgId of sortedIds) {
+        let message = await client.fetchOne(msgId, { source: true, envelope: true });
+        if (!message || !message.source) continue;
 
-      let parsed = await simpleParser(message.source);
-      
-      const text = parsed.text || "";
-      const html = parsed.html || "";
-      const subject = parsed.subject || "";
-      
-      // Netflix codes are usually 4 digits for PIN or 6 digits for access
-      const combined = (subject + " " + text + " " + html).toLowerCase();
-      
-      // Look for 4 or 6 digit numbers. 
-      
-      // Try to find 6 consecutive digits first (common for sign-in)
-      let codeMatch = combined.match(/\b\d{6}\b/);
-      
-      // If not found, try 4 digits (common for PIN)
-      if (!codeMatch) {
-         codeMatch = combined.match(/\b\d{4}\b/);
-      }
-      
-      // If still not found, search for codes with a space in the middle like "123 456"
-      if (!codeMatch) {
-         const spaceMatch = combined.match(/\b\d{3}\s\d{3}\b/);
-         if (spaceMatch) {
-           return { code: spaceMatch[0].replace(/\s/g, '') };
-         }
-      }
+        const msgDate = new Date(message.envelope.date);
+        const diffMinutes = (Date.now() - msgDate.getTime()) / (1000 * 60);
+        if (diffMinutes > 60) continue; 
 
-      // Check if the found code is a year (loose filter)
-      if (codeMatch && (codeMatch[0] === "2024" || codeMatch[0] === "2025" || codeMatch[0] === "2026")) {
-        // Look for another one if this is just the year
-        const matches = combined.matchAll(/\b\d{4}\b/g);
-        for (const m of matches) {
-          if (m[0] !== "2024" && m[0] !== "2025" && m[0] !== "2026") {
-            return { code: m[0] };
-          }
+        let parsed = await simpleParser(message.source);
+        const text = parsed.text || "";
+        const html = parsed.html || "";
+        const subject = parsed.subject || "";
+        const combined = (subject + " " + text + " " + html).toLowerCase();
+        
+        // Tenta 6 dígitos
+        let codeMatch = combined.match(/\b\d{6}\b/);
+        
+        // Tenta 4 dígitos se não achar 6
+        if (!codeMatch) {
+           codeMatch = combined.match(/\b\d{4}\b/);
+        }
+        
+        // Tenta formatos com espaço (123 456)
+        if (!codeMatch) {
+           const spaceMatch = combined.match(/\b\d{3}\s\d{3}\b/);
+           if (spaceMatch) {
+             return { code: spaceMatch[0].replace(/\s/g, '') };
+           }
+        }
+
+        if (codeMatch) {
+           const result = codeMatch[0];
+           // Filtra anos comuns
+           if (result !== "2024" && result !== "2025" && result !== "2026") {
+             return { code: result };
+           }
         }
       }
       
-      return codeMatch ? { code: codeMatch[0] } : null;
-
+      console.log("Nenhum código válido encontrado nos e-mails recentes.");
+      return null;
     } finally {
       lock.release();
     }
@@ -103,6 +102,7 @@ async function getLatestNetflixCode() {
   }
 }
 
+// API routes FIRST
 app.get("/api/netflix-code", async (req, res) => {
   try {
     const result = await getLatestNetflixCode();
@@ -123,28 +123,25 @@ app.get("/api/netflix-code", async (req, res) => {
       res.status(404).json({ error: "Nenhum código encontrado nos últimos 60 minutos." });
     }
   } catch (error) {
+    console.error("Endpoint Error:", error);
     res.status(500).json({ error: "Erro interno ao processar busca." });
   }
 });
 
-async function startServer() {
-  if (process.env.NODE_ENV !== "production") {
+// Handling for development (AI Studio)
+if (process.env.NODE_ENV !== "production") {
+  async function setupVite() {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+    
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Server running on http://localhost:${PORT}`);
     });
   }
-
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+  setupVite();
 }
 
-startServer();
+export default app;

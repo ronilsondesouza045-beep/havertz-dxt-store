@@ -229,23 +229,27 @@ export function SupportChat() {
           if (option.id === 'netflix_free') {
             response = getNetflixResponse(null);
           } else if (option.id === 'check_netflix_code') {
+            // Show a temporary message to let the user know we are working
+            toast.loading("Buscando código no Gmail...", { id: 'searching-code' });
+            
             try {
-               // Show a loading indicator in a real app, here we just fetch
                const codeRes = await axios.get('/api/netflix-code');
+               toast.success("Código localizado!", { id: 'searching-code' });
                response = getNetflixResponse(codeRes.data.code);
             } catch (err: any) {
+               toast.dismiss('searching-code');
                if (err.response) {
                  if (err.response.status === 404) {
                    response = "❌ Nenhum código novo da Netflix foi encontrado nos últimos 60 minutos.\n\nCertifique-se de:\n1. Clicar em 'Enviar Código' na Netflix.\n2. Aguardar 10-15 segundos.\n3. Clicar novamente em 'BUSCAR CÓDIGO AGORA'.";
                  } else if (err.response.status === 401) {
-                   response = "🔑 Erro de Autenticação: A 'Senha de App' configurada pode estar incorreta ou expirada. Verifique as variáveis EMAIL_USER e EMAIL_PASS.";
+                   response = "🔑 **Erro de Configuração:**\nO bot não conseguiu entrar no seu e-mail.\n\nVerifique se a 'Senha de App' no Vercel está correta e sem espaços.";
                  } else if (err.response.status === 503) {
-                   response = "🌐 Erro de Conexão: Não foi possível conectar ao Gmail. Isso pode acontecer se o Gmail bloquear conexões de servidores externos (como o Vercel).";
+                   response = "🌐 **Erro de Conexão:**\nO Gmail bloqueou a conexão do servidor. Isso é comum no Vercel. Tente clicar novamente em alguns segundos.";
                  } else {
-                   response = "⚠️ Ocorreu um erro no servidor. Tente novamente em alguns instantes.";
+                   response = "⚠️ Ocorreu um erro técnico: " + (err.response.data?.message || "Erro desconhecido");
                  }
                } else {
-                 response = "⚠️ Não foi possível falar com o servidor. Verifique sua internet.";
+                 response = "⚠️ Não foi possível falar com o servidor. Verifique sua conexão com a internet.";
                }
             }
           } else {
