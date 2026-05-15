@@ -44,7 +44,7 @@ interface Conversation {
   customer_name: string;
   customer_email: string;
   customer_avatar?: string;
-  status: 'aberta' | 'respondida' | 'finalizada';
+  status: 'aberta' | 'respondida' | 'resolvida' | 'fechada';
   last_message: string;
   bot_active?: boolean;
   typing_admin?: boolean;

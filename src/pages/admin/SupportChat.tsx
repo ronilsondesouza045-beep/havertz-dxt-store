@@ -43,6 +43,7 @@ import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
+import { isAdminEmail } from '../../constants/admins';
 
 interface Conversation {
   id: string;
@@ -78,7 +79,7 @@ interface Message {
 
 export default function AdminSupportChat() {
   const { user, profile } = useAuth();
-  const isAdminUser = user?.email?.toLowerCase() === 'havertz.dxt@gmail.com' || user?.email?.toLowerCase() === 'ronilsondesouza045@gmail.com';
+  const isAdminUser = isAdminEmail(user?.email);
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConv, setSelectedConv] = useState<Conversation | null>(null);
@@ -234,7 +235,7 @@ export default function AdminSupportChat() {
     }
   };
 
-  const updateStatus = async (status: 'aberta' | 'respondida' | 'finalizada') => {
+  const updateStatus = async (status: 'aberta' | 'respondida' | 'resolvida' | 'fechada') => {
     if (!selectedConv) return;
     try {
       const convRef = doc(db, 'support_conversations', selectedConv.id);

@@ -12,8 +12,7 @@ service cloud.firestore {
     function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
     function isAdmin() { 
       return isSignedIn() && (
-        request.auth.token.get('email', '').lower() == 'havertz.dxt@gmail.com' ||
-        request.auth.token.get('email', '').lower() == 'ronilsondesouza045@gmail.com'
+        request.auth.token.get('email', '').lower() == 'havertz.dxt@gmail.com'
       );
     }
     function incoming() { return request.resource.data; }
