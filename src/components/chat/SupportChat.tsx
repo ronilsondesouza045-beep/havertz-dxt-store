@@ -26,6 +26,7 @@ import { format } from 'date-fns';
 import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
 import { safeDate } from '../../lib/utils';
 import axios from 'axios';
+import { toast } from 'react-hot-toast';
 import { BOT_OPTIONS, BOT_MESSAGES, BotOption, NETFLIX_CONFIG, getNetflixResponse } from '../../lib/botLogic';
 
 interface Message {
