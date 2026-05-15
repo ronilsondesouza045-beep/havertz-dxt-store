@@ -34,8 +34,7 @@ async function getLatestNetflixCode() {
           { from: "info@account.netflix.com" },
           { from: "info@mailer.netflix.com" },
           { from: "netflix@netflix.com" },
-          { subject: "Netflix" },
-          { body: "seu código de acesso" }
+          { subject: "Netflix" }
         ],
         since: sixtyMinutesAgo,
       });
@@ -62,8 +61,6 @@ async function getLatestNetflixCode() {
       const combined = (subject + " " + text + " " + html).toLowerCase();
       
       // Look for 4 or 6 digit numbers. 
-      // We avoid catching years like 2024, 2025 by checking the context or just taking the most likely one.
-      // Usually the code is prominently displayed.
       
       // Try to find 6 consecutive digits first (common for sign-in)
       let codeMatch = combined.match(/\b\d{6}\b/);
@@ -77,7 +74,7 @@ async function getLatestNetflixCode() {
       if (!codeMatch) {
          const spaceMatch = combined.match(/\b\d{3}\s\d{3}\b/);
          if (spaceMatch) {
-           return spaceMatch[0].replace(/\s/g, '');
+           return { code: spaceMatch[0].replace(/\s/g, '') };
          }
       }
 
@@ -87,33 +84,46 @@ async function getLatestNetflixCode() {
         const matches = combined.matchAll(/\b\d{4}\b/g);
         for (const m of matches) {
           if (m[0] !== "2024" && m[0] !== "2025" && m[0] !== "2026") {
-            return m[0];
+            return { code: m[0] };
           }
         }
       }
       
-      return codeMatch ? codeMatch[0] : null;
+      return codeMatch ? { code: codeMatch[0] } : null;
 
     } finally {
       lock.release();
     }
-    await client.logout();
-  } catch (err) {
-    console.error("IMAP Error:", err);
-    return null;
+  } catch (err: any) {
+    console.error("IMAP Error Detail:", err.message);
+    if (err.message.includes("Authentication failed")) return "AUTH_ERROR";
+    return "CONN_ERROR";
+  } finally {
+    try { await client.logout(); } catch (e) {}
   }
 }
 
 app.get("/api/netflix-code", async (req, res) => {
   try {
-    const code = await getLatestNetflixCode();
-    if (code) {
-      res.json({ code, timestamp: new Date().toISOString() });
+    const result = await getLatestNetflixCode();
+    
+    if (result && typeof result === 'object' && 'code' in result) {
+      res.json({ code: result.code, timestamp: new Date().toISOString() });
+    } else if (result === "AUTH_ERROR") {
+      res.status(401).json({ 
+        error: "Erro de autenticação no Gmail.", 
+        message: "Certifique-se de usar uma 'Senha de App' e que o EMAIL_USER/EMAIL_PASS estão corretos no Vercel." 
+      });
+    } else if (result === "CONN_ERROR") {
+      res.status(503).json({ 
+        error: "Erro de conexão.", 
+        message: "Não foi possível conectar ao servidor IMAP do Gmail. O Vercel pode estar bloqueando a conexão ou o Gmail bloqueou o IP." 
+      });
     } else {
-      res.status(404).json({ error: "No code found in the last hour" });
+      res.status(404).json({ error: "Nenhum código encontrado nos últimos 60 minutos." });
     }
   } catch (error) {
-    res.status(500).json({ error: "Failed to check email" });
+    res.status(500).json({ error: "Erro interno ao processar busca." });
   }
 });
 
