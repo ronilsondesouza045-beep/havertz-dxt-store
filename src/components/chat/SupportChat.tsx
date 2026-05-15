@@ -11,9 +11,15 @@ import {
   Minimize2,
   FileText,
   Eye,
-  ExternalLink
+  ExternalLink,
+  Bot,
+  User as UserIcon,
+  Search,
+  ArrowLeft,
+  ChevronRight,
+  Headphones
 } from 'lucide-react';
-import { doc, setDoc, addDoc, collection, query, orderBy, onSnapshot, updateDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, addDoc, collection, query, orderBy, onSnapshot, updateDoc, getDoc, serverTimestamp, getDocs, where } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, auth, storage } from '../../lib/firebase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -21,11 +27,12 @@ import { Button } from '../ui/Button';
 import { format } from 'date-fns';
 import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
 import { safeDate } from '../../lib/utils';
+import { BOT_OPTIONS, BOT_MESSAGES, BotOption } from '../../lib/botLogic';
 
 interface Message {
   id: string;
   conversation_id: string;
-  sender_type: 'client' | 'admin';
+  sender_type: 'client' | 'admin' | 'bot';
   sender_id: string;
   message: string;
   image_url?: string;
@@ -45,6 +52,7 @@ interface Conversation {
   customer_email: string;
   status: 'aberta' | 'respondida' | 'finalizada';
   last_message: string;
+  bot_active?: boolean;
   typing_client?: boolean;
   typing_admin?: boolean;
   created_at: string;
@@ -61,6 +69,7 @@ export function SupportChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [botTyping, setBotTyping] = useState(false);
   const [formData, setFormData] = useState({
     name: profile?.name || '',
     email: profile?.email || '',
@@ -157,11 +166,12 @@ export function SupportChat() {
     try {
       const newConvData = {
         user_id: user?.uid || null,
-        customer_name: formData.name,
-        customer_email: formData.email,
+        customer_name: formData.name || user?.displayName || 'Cliente',
+        customer_email: formData.email || user?.email || '',
         subject: formData.subject || 'Atendimento via Site',
         status: 'aberta',
         last_message: 'Atendimento iniciado',
+        bot_active: true,
         created_at: serverTimestamp(),
         updated_at: serverTimestamp()
       };
@@ -172,11 +182,12 @@ export function SupportChat() {
       setConversation(newConv);
       localStorage.setItem('havertz_chat_conv_id', newConv.id);
 
+      // Bot welcome message
       await addDoc(collection(db, 'support_conversations', newConv.id, 'messages'), {
         conversation_id: newConv.id,
-        sender_type: 'client',
-        sender_id: user?.uid || 'anonymous',
-        message: formData.subject || 'Preciso de ajuda',
+        sender_type: 'bot',
+        sender_id: 'dxt_bot',
+        message: BOT_MESSAGES.welcome,
         read: false,
         created_at: serverTimestamp()
       });
@@ -188,11 +199,81 @@ export function SupportChat() {
     }
   };
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !conversation) return;
+  const processBotResponse = async (convId: string, text: string) => {
+    setBotTyping(true);
+    
+    // Simulate thinking
+    await new Promise(resolve => setTimeout(resolve, 1500));
 
-    const msgText = newMessage;
+    try {
+      const lowerText = text.toLowerCase().trim();
+      let response = '';
+
+      // Check for human handover
+      if (lowerText.includes('atendente') || lowerText.includes('humano') || lowerText.includes('pessoa')) {
+        response = BOT_MESSAGES.switching_to_human;
+        await updateDoc(doc(db, 'support_conversations', convId), {
+          bot_active: false,
+          status: 'aberta',
+          updated_at: serverTimestamp()
+        });
+      }
+      // Check for order code
+      else if (lowerText.includes('#hvz-')) {
+        const code = lowerText.match(/#hvz-\d+/)?.[0]?.toUpperCase();
+        if (code) {
+          const ordersRef = collection(db, 'orders');
+          const q = query(ordersRef, where('order_code', '==', code.replace('#', '')));
+          const snap = await getDocs(q);
+          
+          if (!snap.empty) {
+            const order = snap.docs[0].data();
+            response = BOT_MESSAGES.order_info(code, order.status);
+          } else {
+            response = BOT_MESSAGES.order_not_found;
+          }
+        }
+      }
+      // Check keywords
+      else {
+        const option = BOT_OPTIONS.find(opt => 
+          opt.keywords.some(kw => lowerText.includes(kw))
+        );
+        
+        if (option) {
+          response = option.response;
+        } else {
+          response = BOT_MESSAGES.not_found;
+        }
+      }
+
+      await addDoc(collection(db, 'support_conversations', convId, 'messages'), {
+        conversation_id: convId,
+        sender_type: 'bot',
+        sender_id: 'dxt_bot',
+        message: response,
+        read: false,
+        created_at: serverTimestamp()
+      });
+
+      await updateDoc(doc(db, 'support_conversations', convId), {
+        last_message: response,
+        updated_at: serverTimestamp()
+      });
+
+    } catch (err) {
+      console.error("Bot processing error:", err);
+    } finally {
+      setBotTyping(false);
+    }
+  };
+
+  const handleSendMessage = async (e?: React.FormEvent, directMessage?: string) => {
+    if (e) e.preventDefault();
+    const msgText = directMessage || newMessage;
+    
+    if (!msgText.trim() || !conversation) return;
+
     setNewMessage('');
     setIsLoading(true);
 
@@ -213,11 +294,24 @@ export function SupportChat() {
       });
       
       scrollToBottom();
+
+      // Trigger bot if active
+      if (conversation.bot_active !== false) {
+        processBotResponse(conversation.id, msgText);
+      }
     } catch (err) { 
       console.error("Erro ao enviar mensagem:", err);
     } finally { 
       setIsLoading(false); 
     }
+  };
+
+  const handleOptionClick = (option: BotOption) => {
+    handleSendMessage(undefined, option.label);
+  };
+
+  const handleRequestAttendant = () => {
+    handleSendMessage(undefined, 'Falar com atendente');
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -266,127 +360,214 @@ export function SupportChat() {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="mb-4 w-[340px] md:w-[380px] h-[520px] md:h-[580px] bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col ring-1 ring-white/5"
+            className="mb-4 w-full sm:w-[400px] h-full sm:h-[600px] fixed sm:static inset-0 sm:inset-auto bg-zinc-950 border-0 sm:border sm:border-zinc-800 rounded-0 sm:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col ring-1 ring-white/5 z-50"
           >
-            <div className="p-5 bg-zinc-900/80 backdrop-blur-md border-b border-zinc-800 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-11 w-11 rounded-2xl bg-black border border-[#00ff66]/30 flex items-center justify-center shadow-[0_0_15px_rgba(0,255,102,0.15)]">
-                  <MessageCircle className="text-[#00ff66] h-5 w-5" />
+            {/* Header Redesigned */}
+            <div className="p-5 bg-gradient-to-r from-zinc-900 to-black border-b border-zinc-800 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <div className="h-12 w-12 rounded-2xl bg-zinc-900 border border-neon-green/30 flex items-center justify-center shadow-[0_0_20px_rgba(57,255,20,0.1)] group-hover:border-neon-green transition-all overflow-hidden">
+                    {conversation?.bot_active !== false ? (
+                      <Bot className="text-neon-green h-6 w-6" />
+                    ) : (
+                      <Headphones className="text-neon-green h-6 w-6" />
+                    )}
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-zinc-950 rounded-lg flex items-center justify-center border border-zinc-800">
+                    <div className="h-2 w-2 rounded-full bg-neon-green animate-pulse shadow-[0_0_8px_#39FF14]" />
+                  </div>
                 </div>
                 <div>
-                  <h3 className="text-xs font-black text-white italic uppercase tracking-[0.15em]">HAVERTZ.DXT <span className="text-[#00ff66]">SUPORTE</span></h3>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#00ff66] shadow-[0_0_8px_#00ff66] animate-pulse" />
-                    <span className="text-[9px] text-zinc-400 uppercase font-black tracking-widest italic">Online agora</span>
+                  <h3 className="text-xs font-black text-white italic uppercase tracking-[0.2em] leading-none mb-1">
+                    {conversation?.bot_active !== false ? 'DXT Assistente' : 'Suporte Elite'}
+                  </h3>
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <span className="text-[9px] text-zinc-500 uppercase font-black tracking-widest italic leading-none">Status: <span className="text-neon-green">Operante</span></span>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-1">
-                <button onClick={() => setIsMinimized(true)} className="p-2 hover:bg-zinc-800 rounded-xl text-zinc-500 transition-all hover:text-white"><Minimize2 size={18} /></button>
-                <button onClick={() => setIsOpen(false)} className="p-2 hover:bg-zinc-800 rounded-xl text-zinc-500 transition-all hover:text-red-500"><X size={18} /></button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setIsMinimized(true)} className="p-2.5 hover:bg-zinc-800/50 rounded-xl text-zinc-500 transition-all hover:text-white hidden sm:block"><Minimize2 size={18} /></button>
+                <button onClick={() => setIsOpen(false)} className="p-2.5 hover:bg-zinc-800/50 rounded-xl text-zinc-500 transition-all hover:text-red-500"><X size={20} /></button>
               </div>
             </div>
 
             <div className="flex-1 overflow-hidden flex flex-col bg-zinc-950 relative">
-              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 pointer-events-none" />
+              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 pointer-events-none" />
+              
               {!conversation ? (
+                /* Starting Form Redesigned */
                 <div className="p-8 h-full flex flex-col justify-center relative z-10">
-                  <div className="mb-8 text-center">
-                    <div className="h-16 w-16 bg-zinc-900 border border-zinc-800 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-                      <MessageCircle className="text-[#00ff66] h-8 w-8" />
+                  <div className="mb-10 text-center space-y-3">
+                    <div className="inline-flex p-4 bg-zinc-900 border border-zinc-800 rounded-3xl mb-4 shadow-2xl">
+                      <Bot className="text-neon-green h-10 w-10 animate-bounce" />
                     </div>
-                    <p className="text-zinc-400 text-xs italic font-black uppercase tracking-widest mb-1">Central de Atendimento</p>
-                    <h2 className="text-white text-lg font-black italic uppercase">Inicie seu <span className="text-[#00ff66]">Ticket</span></h2>
+                    <p className="text-zinc-500 text-[10px] italic font-black uppercase tracking-[0.3em]">Protocolo v2.0</p>
+                    <h2 className="text-white text-3xl font-black italic uppercase tracking-tighter leading-tight">
+                      INICIE SUA <span className="text-neon-green font-outline-2">INJEÇÃO</span>
+                    </h2>
+                    <p className="text-zinc-600 text-xs italic font-medium max-w-[250px] mx-auto">
+                      Atendimento inteligente para acelerar seu processamento.
+                    </p>
                   </div>
                   <form onSubmit={handleStartConversation} className="space-y-4">
-                    <div className="space-y-1">
-                      <label className="text-[9px] text-zinc-600 uppercase font-black ml-1 tracking-widest">Identificação</label>
+                    <div className="space-y-2">
                       <input
                         required
                         type="text"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl px-5 py-4 text-white text-sm focus:outline-none focus:border-[#00ff66]/50 transition-all"
-                        placeholder="Como podemos te chamar?"
+                        className="w-full bg-zinc-900/40 border-2 border-zinc-900 rounded-2xl px-6 py-4 text-white text-sm focus:outline-none focus:border-neon-green/30 transition-all placeholder:text-zinc-700 italic font-bold"
+                        placeholder="IDENTIFICADOR (NOME)"
                       />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] text-zinc-600 uppercase font-black ml-1 tracking-widest">Assunto</label>
+                    <div className="space-y-2">
                       <input
                         required
                         type="text"
                         value={formData.subject}
                         onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                        className="w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl px-5 py-4 text-white text-sm focus:outline-none focus:border-[#00ff66]/50 transition-all"
-                        placeholder="Ex: Entrega de pedido"
+                        className="w-full bg-zinc-900/40 border-2 border-zinc-900 rounded-2xl px-6 py-4 text-white text-sm focus:outline-none focus:border-neon-green/30 transition-all placeholder:text-zinc-700 italic font-bold"
+                        placeholder="ASSUNTO DO CHAMADO"
                       />
                     </div>
-                    <Button type="submit" variant="neon" className="w-full py-7 font-black italic uppercase tracking-[0.2em] mt-2 shadow-[0_0_20px_rgba(57,255,20,0.2)]" disabled={isStarting}>
-                      {isStarting ? <Loader2 className="animate-spin" /> : 'CONECTAR AGORA'}
+                    <Button type="submit" variant="neon" className="w-full py-8 font-black italic uppercase tracking-[0.3em] mt-4 shadow-[0_20px_40px_rgba(57,255,20,0.15)] rounded-2xl group" disabled={isStarting}>
+                      {isStarting ? <Loader2 className="animate-spin" /> : (
+                        <span className="flex items-center gap-2">
+                          ENTRAR NO CHAT <ChevronRight size={18} className="transition-transform group-hover:translate-x-1" />
+                        </span>
+                      )}
                     </Button>
                   </form>
                 </div>
               ) : (
                 <>
-                  <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-5 scrollbar-hide relative z-10">
-                    <div className="p-4 bg-zinc-900/30 border border-zinc-800/50 rounded-2xl mb-2">
-                       <p className="text-[10px] text-zinc-500 uppercase font-black text-center tracking-[0.2em]">Protocolo de Atendimento Gerado</p>
+                  {/* Message List Redesigned */}
+                  <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide relative z-10">
+                    <div className="flex flex-col items-center gap-2 mb-8">
+                      <Badge variant="outline" className="text-[8px] border-zinc-900 text-zinc-600 tracking-[0.4em] font-black uppercase bg-zinc-950/80 px-4 py-1.5 rounded-full">
+                        Criptografia Elite ponta-a-ponta
+                      </Badge>
                     </div>
-                    {messages.map((msg) => (
-                      <div key={msg.id} className={`flex ${msg.sender_type === 'client' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[85%] rounded-2xl p-4 text-sm shadow-xl ${msg.sender_type === 'client' ? 'bg-[#00ff66]/5 border border-[#00ff66]/20 text-white rounded-tr-none' : 'bg-zinc-900 border border-zinc-800 text-zinc-200 rounded-tl-none'}`}>
-                          {msg.image_url && (
-                             <div 
-                               className="rounded-xl mb-3 overflow-hidden border border-zinc-700/50 bg-black/40 cursor-pointer group relative"
-                               onClick={() => window.open(msg.image_url, '_blank')}
-                             >
-                               {msg.image_url.toLowerCase().includes('.pdf') ? (
-                                 <div className="p-6 flex flex-col items-center justify-center gap-2">
-                                    <FileText size={40} className="text-[#00ff66]/50" />
-                                    <span className="text-[10px] font-black uppercase text-[#00ff66]/60">Ver Documento PDF</span>
+
+                    {messages.map((msg, i) => (
+                      <motion.div 
+                        initial={{ opacity: 0, x: msg.sender_type === 'client' ? 10 : -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        key={msg.id} 
+                        className={`flex gap-3 ${msg.sender_type === 'client' ? 'flex-row-reverse' : 'flex-row'}`}
+                      >
+                        <div className={`h-8 w-8 rounded-xl shrink-0 flex items-center justify-center border ${
+                          msg.sender_type === 'client' 
+                            ? 'bg-zinc-900 border-zinc-800' 
+                            : msg.sender_type === 'bot' 
+                              ? 'bg-neon-green/10 border-neon-green/30 text-neon-green' 
+                              : 'bg-neon-purple/10 border-neon-purple/30 text-neon-purple'
+                        }`}>
+                          {msg.sender_type === 'client' ? <UserIcon size={14} /> : msg.sender_type === 'bot' ? <Bot size={14} /> : <Headphones size={14} />}
+                        </div>
+
+                        <div className={`max-w-[80%] space-y-1 ${msg.sender_type === 'client' ? 'items-end' : 'items-start'}`}>
+                          <div className={`rounded-2xl p-4 text-sm shadow-xl transition-all ${
+                            msg.sender_type === 'client' 
+                              ? 'bg-zinc-900 border border-zinc-800 text-white rounded-tr-none' 
+                              : msg.sender_type === 'bot'
+                                ? 'bg-zinc-900/80 border border-neon-green/20 text-zinc-100 rounded-tl-none ring-1 ring-neon-green/5'
+                                : 'bg-zinc-900/80 border border-neon-purple/20 text-zinc-100 rounded-tl-none'
+                          }`}>
+                            {msg.image_url && (
+                               <div 
+                                 className="rounded-xl mb-3 overflow-hidden border border-zinc-800 bg-black cursor-pointer group relative"
+                                 onClick={() => window.open(msg.image_url, '_blank')}
+                               >
+                                 <img src={msg.image_url} alt="Upload" className="w-full max-h-64 object-cover group-hover:scale-105 transition-transform duration-500" />
+                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
+                                    <Eye className="text-neon-green h-6 w-6" />
                                  </div>
-                               ) : (
-                                 <>
-                                   <img src={msg.image_url} alt="Upload" className="w-full max-h-56 object-cover" />
-                                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
-                                      <Eye className="text-[#00ff66] h-6 w-6" />
-                                   </div>
-                                 </>
-                               )}
-                             </div>
-                          )}
-                          <p className="leading-relaxed font-medium">{msg.message}</p>
-                          <div className="flex items-center gap-1.5 mt-2 justify-end opacity-40 text-[9px] font-black italic">
+                               </div>
+                            )}
+                            <p className="leading-relaxed font-medium italic">{msg.message}</p>
+                          </div>
+                          <div className="flex items-center gap-1.5 opacity-30 text-[8px] font-black italic tracking-widest uppercase px-1">
                             {msg.created_at && format(safeDate(msg.created_at), 'HH:mm')}
-                            {msg.sender_type === 'client' && (msg.read ? <CheckCheck size={11} className="text-[#00ff66]" /> : <Check size={11} />)}
+                            {msg.sender_type === 'client' && (msg.read ? <CheckCheck size={10} className="text-neon-green" /> : <Check size={10} />)}
                           </div>
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
-                    {conversation.typing_admin && (
-                      <div className="flex justify-start">
-                        <div className="bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-full text-[10px] text-[#00ff66] font-black uppercase italic animate-pulse shadow-[0_0_10px_rgba(0,255,102,0.1)]">
-                           Digitando...
+
+                    {/* Bot Typing Indicator */}
+                    {(botTyping || conversation.typing_admin) && (
+                      <div className="flex gap-3">
+                        <div className="h-8 w-8 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-600">
+                          {botTyping ? <Bot size={14} className="animate-pulse" /> : <Headphones size={14} className="animate-pulse" />}
+                        </div>
+                        <div className="bg-zinc-900/50 border border-zinc-800/50 px-4 py-3 rounded-2xl rounded-tl-none">
+                           <div className="flex gap-1">
+                             <div className="h-1.5 w-1.5 bg-neon-green rounded-full animate-bounce [animation-delay:-0.3s]" />
+                             <div className="h-1.5 w-1.5 bg-neon-green rounded-full animate-bounce [animation-delay:-0.15s]" />
+                             <div className="h-1.5 w-1.5 bg-neon-green rounded-full animate-bounce" />
+                           </div>
                         </div>
                       </div>
                     )}
+
+                    {/* Bot Quick Options */}
+                    {conversation.bot_active !== false && !botTyping && !isLoading && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex flex-col gap-2 pt-4"
+                      >
+                        <p className="text-[9px] text-zinc-600 font-black uppercase tracking-[0.3em] mb-1 px-1">Ações Recomendadas</p>
+                        <div className="flex flex-wrap gap-2">
+                          {BOT_OPTIONS.map(opt => (
+                            <button
+                              key={opt.id}
+                              onClick={() => handleOptionClick(opt)}
+                              className="px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-[10px] text-zinc-400 font-bold italic uppercase hover:border-neon-green/40 hover:text-white transition-all hover:bg-neon-green/5"
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                          <button
+                            onClick={handleRequestAttendant}
+                            className="px-4 py-2.5 bg-zinc-900 border border-neon-purple/20 rounded-xl text-[10px] text-neon-purple font-black italic uppercase hover:bg-neon-purple/10 transition-all flex items-center gap-2"
+                          >
+                            <UserIcon size={12} /> Falar com atendente
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
                   </div>
 
-                  <div className="p-4 bg-zinc-900/80 backdrop-blur-md border-t border-zinc-800 relative z-10">
-                    <form onSubmit={handleSendMessage} className="flex gap-2">
-                       <label className={`p-3.5 rounded-2xl transition-all ${uploading ? 'bg-zinc-800 text-zinc-600 grayscale animate-pulse cursor-not-allowed' : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 cursor-pointer hover:text-[#00ff66]'}`}>
+                  {/* Input area Redesigned */}
+                  <div className="p-5 bg-gradient-to-t from-black to-zinc-900/80 backdrop-blur-xl border-t border-zinc-800 relative z-10">
+                    <form onSubmit={handleSendMessage} className="flex gap-3">
+                       <label className={`p-4 rounded-2xl transition-all ${uploading ? 'bg-zinc-800 border-zinc-700 pointer-events-none' : 'bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-500 cursor-pointer hover:text-neon-green'}`}>
                           {uploading ? <Loader2 className="animate-spin" size={20} /> : <ImageIcon size={20} />}
                           <input type="file" className="hidden" accept="image/*,application/pdf" onChange={handleImageUpload} disabled={uploading} />
                        </label>
-                       <input
-                        type="text"
-                        value={newMessage}
-                        onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
-                        placeholder="Sua dúvida mestre..."
-                        className="flex-1 bg-zinc-800 border border-zinc-700 rounded-2xl px-5 py-2 text-white text-sm focus:outline-none focus:border-[#00ff66]/30 transition-all"
-                       />
-                       <button type="submit" disabled={!newMessage.trim() || isLoading} className="p-3.5 bg-[#00ff66] text-black rounded-2xl hover:bg-[#00ff66]/90 transition-all shadow-[0_0_20px_rgba(0,255,102,0.3)] active:scale-95 disabled:grayscale disabled:opacity-50">
-                         <Send size={20} />
+                       <div className="relative flex-1">
+                         <input
+                          type="text"
+                          value={newMessage}
+                          onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
+                          placeholder={conversation.bot_active !== false ? "Digite ou escolha abaixo..." : "Sua dúvida mestre..."}
+                          className="w-full h-full bg-zinc-900 border border-zinc-800 rounded-2xl px-6 text-white text-sm focus:outline-none focus:border-neon-green/30 transition-all font-bold italic placeholder:text-zinc-700"
+                         />
+                         {newMessage.trim() && (
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                               <div className="h-1.5 w-1.5 bg-neon-green rounded-full animate-ping" />
+                            </div>
+                         )}
+                       </div>
+                       <button 
+                        type="submit" 
+                        disabled={!newMessage.trim() || isLoading || botTyping} 
+                        className="p-4 bg-neon-green text-black rounded-2xl hover:bg-neon-green/90 transition-all shadow-[0_10px_20px_rgba(57,255,20,0.15)] active:scale-95 disabled:grayscale disabled:opacity-30 flex items-center justify-center min-w-[56px]"
+                       >
+                         {isLoading || botTyping ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />}
                        </button>
                     </form>
                   </div>

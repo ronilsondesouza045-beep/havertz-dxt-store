@@ -46,6 +46,7 @@
         "subject": { "type": "string" },
         "status": { "type": "string", "enum": ["aberta", "fechada", "pendente"] },
         "last_message": { "type": "string" },
+        "bot_active": { "type": "boolean" },
         "updated_at": { "type": "string", "format": "date-time" }
       },
       "required": ["customer_email", "status"]
@@ -56,7 +57,7 @@
       "type": "object",
       "properties": {
         "conversation_id": { "type": "string" },
-        "sender_type": { "type": "string", "enum": ["admin", "client"] },
+        "sender_type": { "type": "string", "enum": ["admin", "client", "bot"] },
         "sender_id": { "type": "string" },
         "message": { "type": "string" },
         "read": { "type": "boolean" },

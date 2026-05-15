@@ -33,7 +33,10 @@ import {
   Loader2,
   ExternalLink,
   Eye,
-  FileText
+  FileText,
+  Bot,
+  UserCheck,
+  Headphones
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -49,6 +52,7 @@ interface Conversation {
   customer_email: string;
   status: 'aberta' | 'respondida' | 'resolvida' | 'fechada';
   last_message: string;
+  bot_active?: boolean;
   updated_at: any;
   created_at: any;
   typing_client?: boolean;
@@ -58,7 +62,7 @@ interface Conversation {
 interface Message {
   id: string;
   conversation_id: string;
-  sender_type: 'client' | 'admin';
+  sender_type: 'client' | 'admin' | 'bot';
   sender_id: string;
   message: string;
   image_url?: string;
@@ -167,13 +171,28 @@ export default function AdminSupportChat() {
       await updateDoc(convRef, {
         last_message: msgText,
         updated_at: serverTimestamp(),
-        status: 'respondida'
+        status: 'respondida',
+        bot_active: false // Disable bot when admin responds
       });
         
     } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, `support_conversations/${selectedConv.id}/messages`);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const takeOverConversation = async () => {
+    if (!selectedConv) return;
+    try {
+      const convRef = doc(db, 'support_conversations', selectedConv.id);
+      await updateDoc(convRef, {
+        bot_active: false,
+        updated_at: serverTimestamp()
+      });
+      toast.success('Você assumiu o atendimento.');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `support_conversations/${selectedConv.id}`);
     }
   };
 
@@ -271,7 +290,14 @@ export default function AdminSupportChat() {
                     }`}
                   >
                     <div className="flex justify-between items-start">
-                      <h4 className="font-bold text-white text-sm uppercase truncate max-w-[150px]">{conv.customer_name}</h4>
+                      <div className="flex flex-col">
+                        <h4 className="font-bold text-white text-sm uppercase truncate max-w-[150px]">{conv.customer_name}</h4>
+                        {conv.bot_active !== false && (
+                          <div className="flex items-center gap-1 text-[8px] text-neon-green font-black uppercase italic mt-0.5">
+                            <Bot size={8} /> Bot Ativo
+                          </div>
+                        )}
+                      </div>
                       <span className="text-[9px] text-zinc-600 font-bold italic">
                         {conv.updated_at && format(safeDate(conv.updated_at), 'HH:mm')}
                       </span>
@@ -333,10 +359,25 @@ export default function AdminSupportChat() {
                     </div>
                     <div>
                       <h3 className="text-sm font-bold text-white uppercase">{selectedConv.customer_name}</h3>
-                      <p className="text-[10px] text-zinc-500 font-medium">{selectedConv.customer_email}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-[10px] text-zinc-500 font-medium">{selectedConv.customer_email}</p>
+                        {selectedConv.bot_active !== false && (
+                          <Badge variant="outline" className="text-[7px] border-neon-green/30 text-neon-green h-4">BOT ATIVO</Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {selectedConv.bot_active !== false && (
+                      <Button 
+                        variant="neon" 
+                        size="sm" 
+                        onClick={takeOverConversation}
+                        className="h-8 py-0 text-[9px] font-black italic uppercase px-3 shadow-none"
+                      >
+                        ASSUMIR CHAT <UserCheck className="ml-1.5 h-3 w-3" />
+                      </Button>
+                    )}
                     <select
                       value={selectedConv.status}
                       onChange={(e) => updateStatus(e.target.value as any)}
@@ -372,8 +413,15 @@ export default function AdminSupportChat() {
                         <div className={`p-4 rounded-2xl text-sm ${
                           msg.sender_type === 'admin' 
                             ? 'bg-neon-green text-black font-medium rounded-tr-none shadow-[0_0_15px_rgba(57,255,20,0.2)]' 
-                            : 'bg-zinc-900 border border-zinc-800 text-white rounded-tl-none'
+                            : msg.sender_type === 'bot'
+                              ? 'bg-zinc-900 border border-neon-green/10 text-white rounded-tl-none ring-1 ring-neon-green/5'
+                              : 'bg-zinc-900 border border-zinc-800 text-white rounded-tl-none'
                         }`}>
+                          {msg.sender_type === 'bot' && (
+                            <div className="flex items-center gap-1.5 text-[8px] font-black text-neon-green uppercase mb-2">
+                              <Bot size={10} /> DXT ASSISTENTE
+                            </div>
+                          )}
                           {msg.image_url && (
                             <div className="mb-3 rounded-lg overflow-hidden border border-black/20 bg-black/40">
                               {msg.image_url.toLowerCase().includes('.pdf') ? (

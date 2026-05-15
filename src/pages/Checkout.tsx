@@ -311,11 +311,7 @@ Instagram: @havertz.dxt`;
                     </div>
                   </div>
   
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="p-6 rounded-3xl bg-black/40 border border-zinc-800 flex flex-col justify-center shadow-lg">
-                      <p className="text-[10px] text-zinc-600 uppercase font-black tracking-widest mb-2">Favorecido Pix (Recebedor)</p>
-                      <p className="font-black text-white uppercase italic text-xl tracking-tighter leading-none">RONILSON SOUZA</p>
-                    </div>
+                  <div className="grid grid-cols-1 gap-4">
                     <div className="p-6 rounded-3xl bg-zinc-900/60 border border-zinc-800 flex flex-col justify-center shadow-lg">
                       <p className="text-[10px] text-neon-green uppercase font-black tracking-widest mb-2">Cliente Logado (Pagador)</p>
                       <p className="font-black text-white uppercase italic text-xl tracking-tighter leading-none truncate">{customerName}</p>
