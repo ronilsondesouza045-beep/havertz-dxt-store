@@ -51,6 +51,7 @@ interface Conversation {
   order_code?: string;
   customer_name: string;
   customer_email: string;
+  customer_avatar?: string;
   status: 'aberta' | 'respondida' | 'resolvida' | 'fechada';
   last_message: string;
   bot_active?: boolean;
@@ -65,6 +66,7 @@ interface Message {
   conversation_id: string;
   sender_type: 'client' | 'admin' | 'bot';
   sender_id: string;
+  sender_avatar?: string;
   message: string;
   image_url?: string;
   file_url?: string;
@@ -75,7 +77,7 @@ interface Message {
 }
 
 export default function AdminSupportChat() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const isAdminUser = user?.email?.toLowerCase() === 'havertz.dxt@gmail.com' || user?.email?.toLowerCase() === 'ronilsondesouza045@gmail.com';
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -182,6 +184,7 @@ export default function AdminSupportChat() {
         conversation_id: selectedConv.id,
         sender_type: 'admin',
         sender_id: user.uid,
+        sender_avatar: profile?.avatar_url || user.photoURL || null,
         message: msgText,
         read: false,
         created_at: serverTimestamp()
@@ -382,8 +385,12 @@ export default function AdminSupportChat() {
                     >
                       <ArrowLeft size={20} />
                     </Button>
-                    <div className="h-10 w-10 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center hidden sm:flex">
-                      <User className="text-zinc-400 h-5 w-5" />
+                    <div className="h-10 w-10 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center hidden sm:flex overflow-hidden">
+                      {selectedConv.customer_avatar ? (
+                        <img src={selectedConv.customer_avatar} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        <User className="text-zinc-400 h-5 w-5" />
+                      )}
                     </div>
                     <div className="min-w-0">
                       <h3 className="text-xs md:text-sm font-bold text-white uppercase truncate">{selectedConv.customer_name}</h3>
@@ -435,9 +442,20 @@ export default function AdminSupportChat() {
                   {messages.map((msg) => (
                     <div 
                       key={msg.id}
-                      className={`flex ${msg.sender_type === 'admin' ? 'justify-end' : 'justify-start'}`}
+                      className={`flex gap-3 ${msg.sender_type === 'admin' ? 'flex-row-reverse' : 'flex-row'}`}
                     >
-                      <div className="flex flex-col gap-1 max-w-[70%]">
+                      <div className={`h-8 w-8 rounded-xl shrink-0 border flex items-center justify-center overflow-hidden ${
+                        msg.sender_type === 'admin' ? 'bg-neon-green/10 border-neon-green/30 text-neon-green' : msg.sender_type === 'bot' ? 'bg-zinc-900 border-neon-green/10 text-neon-green' : 'bg-zinc-900 border-zinc-800 text-zinc-500'
+                      }`}>
+                         {msg.sender_type === 'admin' ? (
+                            msg.sender_avatar ? <img src={msg.sender_avatar} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" /> : <Headphones size={14} />
+                         ) : msg.sender_type === 'bot' ? (
+                            <Bot size={14} />
+                         ) : (
+                            msg.sender_avatar ? <img src={msg.sender_avatar} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" /> : <User size={14} />
+                         )}
+                      </div>
+                      <div className={`flex flex-col gap-1 max-w-[70%] ${msg.sender_type === 'admin' ? 'items-end' : 'items-start'}`}>
                         <div className={`p-4 rounded-2xl text-sm ${
                           msg.sender_type === 'admin' 
                             ? 'bg-neon-green text-black font-medium rounded-tr-none shadow-[0_0_15px_rgba(57,255,20,0.2)]' 

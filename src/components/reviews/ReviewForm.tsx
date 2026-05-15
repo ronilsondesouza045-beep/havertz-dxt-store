@@ -42,6 +42,7 @@ export function ReviewForm({ onSuccess }: ReviewFormProps) {
         user_id: user.uid,
         user_name: displayName,
         user_email: user.email,
+        user_avatar: profile?.avatar_url || user.photoURL || null,
         rating,
         category,
         comment,

@@ -19,7 +19,8 @@ import {
   Gift,
   Eye,
   Trash2,
-  Star
+  Star,
+  User
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
@@ -274,9 +275,18 @@ export default function AdminDashboard() {
                     </div>
                     
                     <div className="flex justify-between items-center py-2 border-y border-zinc-900">
-                       <div>
-                          <p className="text-xs text-zinc-500 uppercase font-black tracking-widest mb-1">Cliente</p>
-                          <p className="text-sm text-white font-bold italic">{order.customer_name || 'Cliente'}</p>
+                       <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 overflow-hidden shrink-0">
+                            {order.customer_avatar ? (
+                              <img src={order.customer_avatar} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                            ) : (
+                              <User className="h-5 w-5" />
+                            )}
+                          </div>
+                          <div>
+                             <p className="text-xs text-zinc-500 uppercase font-black tracking-widest mb-1">Cliente</p>
+                             <p className="text-sm text-white font-bold italic">{order.customer_name || 'Cliente'}</p>
+                          </div>
                        </div>
                        <div className="text-right">
                           <p className="text-xs text-zinc-500 uppercase font-black tracking-widest mb-1">Preço</p>
@@ -328,8 +338,19 @@ export default function AdminDashboard() {
                                 <p className="text-[10px] text-zinc-500 font-bold mt-0.5 uppercase">{safeDate(order.created_at).toLocaleDateString()}</p>
                              </td>
                              <td className="px-6 py-5">
-                                <p className="text-sm text-white font-bold italic tracking-tight">{order.customer_name || 'Cliente'}</p>
-                                <p className="text-[10px] text-zinc-500 font-medium">{order.customer_email}</p>
+                                <div className="flex items-center gap-3">
+                                   <div className="h-9 w-9 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 overflow-hidden shrink-0">
+                                     {order.customer_avatar ? (
+                                       <img src={order.customer_avatar} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                                     ) : (
+                                       <User size={16} className="h-4 w-4" />
+                                     )}
+                                   </div>
+                                   <div>
+                                      <p className="text-sm text-white font-bold italic tracking-tight">{order.customer_name || 'Cliente'}</p>
+                                      <p className="text-[10px] text-zinc-500 font-medium">{order.customer_email}</p>
+                                   </div>
+                                </div>
                              </td>
                              <td className="px-6 py-5">
                                 <p className="text-base font-black text-neon-green italic tracking-tighter">{formatCurrency(order.total_price)}</p>

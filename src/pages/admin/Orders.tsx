@@ -229,9 +229,18 @@ export default function AdminOrders() {
                     <tr key={order.id} className="hover:bg-white/[0.02] transition-colors">
                       <td className="px-6 py-6 font-mono text-xs font-black text-white italic">#{order.order_code}</td>
                       <td className="px-6 py-6">
-                        <div className="flex flex-col">
-                          <span className="text-xs font-bold text-zinc-200">{order.customer_name || 'Sem nome'}</span>
-                          <span className="text-[10px] text-zinc-500 font-medium">{order.customer_email}</span>
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 overflow-hidden shrink-0">
+                            {order.customer_avatar ? (
+                              <img src={order.customer_avatar} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                            ) : (
+                              <User size={14} />
+                            )}
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold text-zinc-200">{order.customer_name || 'Sem nome'}</span>
+                            <span className="text-[10px] text-zinc-500 font-medium">{order.customer_email}</span>
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-6">
@@ -348,8 +357,12 @@ export default function AdminOrders() {
                     
                     <div className="grid grid-cols-1 gap-4">
                       <div className="p-4 bg-zinc-900/30 border border-zinc-800 rounded-2xl flex items-center gap-4">
-                        <div className="h-10 w-10 bg-zinc-800 rounded-xl flex items-center justify-center text-neon-green">
-                          <User size={20} />
+                        <div className="h-10 w-10 bg-zinc-800 rounded-xl flex items-center justify-center text-neon-green overflow-hidden">
+                          {selectedOrder.customer_avatar ? (
+                            <img src={selectedOrder.customer_avatar} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                          ) : (
+                            <User size={20} />
+                          )}
                         </div>
                         <div>
                           <p className="text-[10px] font-black text-zinc-600 uppercase">Cliente</p>

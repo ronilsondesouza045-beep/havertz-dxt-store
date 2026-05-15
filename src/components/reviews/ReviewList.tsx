@@ -92,8 +92,12 @@ export function ReviewList({ reviews, isLoading }: ReviewListProps) {
 
             <div className="mt-8 pt-6 border-t border-zinc-900 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 shadow-inner group-hover:border-neon-green/30 transition-colors">
-                  <User size={18} />
+                <div className="h-10 w-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 shadow-inner group-hover:border-neon-green/30 transition-colors overflow-hidden">
+                  {review.user_avatar ? (
+                    <img src={review.user_avatar} alt={review.user_name} className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    <User size={18} />
+                  )}
                 </div>
                 <div className="flex flex-col">
                   <span className="text-sm font-black text-white italic tracking-tighter uppercase leading-none">

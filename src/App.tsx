@@ -25,6 +25,7 @@ import AdminOrders from './pages/admin/Orders';
 import AdminReviews from './pages/admin/Reviews';
 import AdminSettings from './pages/admin/Settings';
 import AdminSupportChat from './pages/admin/SupportChat';
+import AdminCustomers from './pages/admin/Customers';
 import NotFound from './pages/NotFound';
 
 export default function App() {
@@ -62,6 +63,7 @@ export default function App() {
             <Route path="/admin/avaliacoes" element={<AdminReviews />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/admin/chat" element={<AdminSupportChat />} />
+            <Route path="/admin/clientes" element={<AdminCustomers />} />
           </Route>
 
           {/* 404 */}

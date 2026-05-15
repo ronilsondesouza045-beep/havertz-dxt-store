@@ -32,6 +32,7 @@ interface Message {
   conversation_id: string;
   sender_type: 'client' | 'admin' | 'bot';
   sender_id: string;
+  sender_avatar?: string;
   message: string;
   image_url?: string;
   read: boolean;
@@ -42,6 +43,7 @@ interface Conversation {
   id: string;
   customer_name: string;
   customer_email: string;
+  customer_avatar?: string;
   status: 'aberta' | 'respondida' | 'finalizada';
   last_message: string;
   bot_active?: boolean;
@@ -171,6 +173,7 @@ export function SupportChat() {
         user_id: user?.uid || null,
         customer_name: formData.name || user?.displayName || 'Cliente',
         customer_email: user?.email || profile?.email || '',
+        customer_avatar: profile?.avatar_url || user?.photoURL || null,
         subject: formData.subject || 'Atendimento via Site',
         status: 'aberta',
         last_message: 'Atendimento iniciado',
@@ -264,6 +267,7 @@ export function SupportChat() {
         conversation_id: conversation.id,
         sender_type: 'client',
         sender_id: user?.uid || 'anonymous',
+        sender_avatar: profile?.avatar_url || user?.photoURL || null,
         message: msgText,
         read: false,
         created_at: serverTimestamp()
@@ -299,6 +303,7 @@ export function SupportChat() {
         conversation_id: conversation.id,
         sender_type: 'client',
         sender_id: user?.uid || 'anonymous',
+        sender_avatar: profile?.avatar_url || user?.photoURL || null,
         message: 'Anexo enviado',
         image_url: url,
         read: false,
@@ -404,10 +409,16 @@ export function SupportChat() {
 
                     {messages.map((msg) => (
                       <div key={msg.id} className={`flex gap-3 ${msg.sender_type === 'client' ? 'flex-row-reverse' : 'flex-row'}`}>
-                        <div className={`h-8 w-8 rounded-xl shrink-0 flex items-center justify-center border ${
+                        <div className={`h-8 w-8 rounded-xl shrink-0 flex items-center justify-center border overflow-hidden ${
                           msg.sender_type === 'client' ? 'bg-zinc-900 border-zinc-800' : msg.sender_type === 'bot' ? 'bg-neon-green/10 border-neon-green/30 text-neon-green' : 'bg-neon-purple/10 border-neon-purple/30 text-neon-purple'
                         }`}>
-                          {msg.sender_type === 'client' ? <UserIcon size={14} /> : msg.sender_type === 'bot' ? <Bot size={14} /> : <Headphones size={14} />}
+                          {msg.sender_type === 'client' ? (
+                            msg.sender_avatar ? <img src={msg.sender_avatar} alt="Avatar" className="h-full w-full object-cover" referrerPolicy="no-referrer" /> : <UserIcon size={14} />
+                          ) : msg.sender_type === 'bot' ? (
+                            <Bot size={14} />
+                          ) : (
+                            <Headphones size={14} />
+                          )}
                         </div>
                         <div className={`max-w-[80%] space-y-1 ${msg.sender_type === 'client' ? 'items-end' : 'items-start'}`}>
                           <div className={`rounded-2xl p-4 text-sm shadow-xl ${

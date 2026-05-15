@@ -6,6 +6,7 @@ export interface Profile {
   email: string;
   imvu_nick: string;
   whatsapp?: string;
+  avatar_url?: string;
   role: 'admin' | 'client';
   created_at: string;
 }
@@ -89,6 +90,7 @@ export interface Review {
   user_id: string;
   user_name: string;
   user_email: string;
+  user_avatar?: string;
   rating: number;
   category: string;
   comment: string;

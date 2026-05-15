@@ -16,7 +16,7 @@ import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
 
 export default function OrderDetails() {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,14 +70,23 @@ export default function OrderDetails() {
 
           <Card className="p-0 overflow-hidden mb-8 border-zinc-800 bg-zinc-950">
              <div className="bg-black/40 p-8 border-b border-zinc-900 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                   <div className="flex items-center flex-wrap gap-3 mb-2">
-                      <h1 className="text-2xl font-black text-white italic uppercase tracking-tighter">Pedido #{order.order_code}</h1>
-                      <Badge variant={getStatusColor(order.status)} className="italic font-black py-1 px-3 text-[10px] uppercase">
-                         {order.status}
-                      </Badge>
+                <div className="flex items-center gap-4">
+                   <div className="h-14 w-14 rounded-2xl bg-zinc-950 border border-zinc-800 flex items-center justify-center overflow-hidden shrink-0">
+                      {profile?.avatar_url || user?.photoURL ? (
+                         <img src={profile?.avatar_url || user?.photoURL || ''} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                         <div className="text-xl font-black text-neon-green italic">{user?.displayName?.charAt(0) || user?.email?.charAt(0) || 'U'}</div>
+                      )}
                    </div>
-                   <p className="text-xs text-zinc-600 font-mono font-bold">Solicitado em {safeDate(order.created_at).toLocaleString('pt-BR')}</p>
+                   <div>
+                      <div className="flex items-center flex-wrap gap-3 mb-2">
+                         <h1 className="text-2xl font-black text-white italic uppercase tracking-tighter">Pedido #{order.order_code}</h1>
+                         <Badge variant={getStatusColor(order.status)} className="italic font-black py-1 px-3 text-[10px] uppercase">
+                            {order.status}
+                         </Badge>
+                      </div>
+                      <p className="text-xs text-zinc-600 font-mono font-bold">Solicitado em {safeDate(order.created_at).toLocaleString('pt-BR')}</p>
+                   </div>
                 </div>
                 <div className="text-left md:text-right">
                    <p className="text-[10px] text-zinc-500 uppercase font-black tracking-widest mb-1">Total da Injeção</p>

@@ -5,8 +5,9 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
-import { User, Shield, AtSign, Save } from 'lucide-react';
+import { db, storage } from '../../lib/firebase';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { User, Shield, AtSign, Save, Camera, Trash2, Upload, Loader2 } from 'lucide-react';
 import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
 
 export default function AccountProfile() {
@@ -17,6 +18,7 @@ export default function AccountProfile() {
     whatsapp: '',
   });
   const [loading, setLoading] = useState(false);
+  const [uploadLoading, setUploadLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
@@ -53,6 +55,61 @@ export default function AccountProfile() {
     }
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // Validate size (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert("A imagem deve ter no máximo 2MB");
+      return;
+    }
+
+    setUploadLoading(true);
+    try {
+      const storageRef = ref(storage, `profile-avatars/${user.uid}`);
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+
+      const profileRef = doc(db, 'profiles', user.uid);
+      await updateDoc(profileRef, {
+        avatar_url: downloadURL
+      });
+    } catch (err: any) {
+      console.error("Error uploading photo:", err);
+      alert("Erro ao enviar foto");
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
+  const removePhoto = async () => {
+    if (!user || !profile?.avatar_url) return;
+    
+    setUploadLoading(true);
+    try {
+      // Only delete from storage if it's our storage
+      if (profile.avatar_url.includes('firebasestorage.googleapis.com')) {
+        const storageRef = ref(storage, `profile-avatars/${user.uid}`);
+        await deleteObject(storageRef).catch(e => console.log("File might not exist", e));
+      }
+
+      const profileRef = doc(db, 'profiles', user.uid);
+      await updateDoc(profileRef, {
+        avatar_url: null
+      });
+    } catch (err: any) {
+      console.error("Error removing photo:", err);
+      alert("Erro ao remover foto");
+    } finally {
+      setUploadLoading(false);
+    }
+  };
+
+  const getInitial = (name: string) => {
+    return name ? name.charAt(0).toUpperCase() : '?';
+  };
+
   return (
     <MainLayout>
       <div className="container mx-auto py-12 px-4">
@@ -67,13 +124,49 @@ export default function AccountProfile() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Sidebar info */}
             <div className="space-y-6">
-              <Card className="text-center p-8 bg-zinc-950">
-                 <div className="h-20 w-20 rounded-2xl bg-neon-green/10 border border-neon-green/20 flex items-center justify-center mx-auto mb-4">
-                   <User className="h-10 w-10 text-neon-green" />
+              <Card className="text-center p-8 bg-zinc-950 flex flex-col items-center">
+                 <div className="relative group mb-6">
+                    <div className="h-32 w-32 rounded-3xl bg-zinc-900 border-2 border-zinc-800 overflow-hidden flex items-center justify-center relative">
+                      {profile?.avatar_url ? (
+                        <img 
+                          src={profile.avatar_url} 
+                          alt="Avatar" 
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="text-4xl font-black text-zinc-700 italic">
+                          {getInitial(profile?.name || '')}
+                        </div>
+                      )}
+                      
+                      {uploadLoading && (
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                          <Loader2 className="h-8 w-8 text-neon-green animate-spin" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    <label className="absolute -bottom-2 -right-2 h-10 w-10 bg-neon-green text-black rounded-xl border-4 border-[#09090b] flex items-center justify-center cursor-pointer hover:scale-110 transition-transform shadow-lg shadow-neon-green/20">
+                      <Camera className="h-5 w-5" />
+                      <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={uploadLoading} />
+                    </label>
+
+                    {profile?.avatar_url && !uploadLoading && (
+                      <button 
+                        onClick={removePhoto}
+                        className="absolute -top-2 -right-2 h-8 w-8 bg-red-500 text-white rounded-lg border-4 border-[#09090b] flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
+                        title="Remover foto"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                  </div>
+
                  <h2 className="text-xl font-bold text-white uppercase italic">{profile?.name}</h2>
                  <p className="text-xs text-zinc-500 font-mono mt-1">{profile?.email}</p>
-                 <div className="mt-6 flex justify-center">
+                 
+                 <div className="mt-6 flex justify-center w-full">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-[10px] font-bold uppercase tracking-widest text-zinc-400">
                       <Shield className="h-3 w-3" /> {profile?.role} Access
                     </div>

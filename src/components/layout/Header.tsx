@@ -25,6 +25,7 @@ export function Header() {
     navLinks.push({ label: 'Meus Pedidos', path: '/account/orders' });
     if (isAdmin) {
       navLinks.push({ label: 'Admin', path: '/admin' });
+      navLinks.push({ label: 'Clientes', path: '/admin/clientes' });
       navLinks.push({ label: 'Chats', path: '/admin/chat' });
       navLinks.push({ label: 'Reviews Admin', path: '/admin/avaliacoes' });
     }
@@ -61,12 +62,18 @@ export function Header() {
           {user ? (
             <div className="flex items-center space-x-4">
               <Link to="/account">
-                <Button variant="ghost" size="sm" className="space-x-2">
-                  <User className="h-4 w-4" />
-                  <span>{profile?.name?.split(' ')[0]}</span>
+                <Button variant="ghost" size="sm" className="space-x-2 h-10 px-3 hover:bg-zinc-800">
+                  <div className="h-6 w-6 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center">
+                    {profile?.avatar_url ? (
+                      <img src={profile.avatar_url} alt="Profile" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <span className="text-[10px] font-black">{profile?.name?.charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+                  <span className="font-bold">{profile?.name?.split(' ')[0]}</span>
                 </Button>
               </Link>
-              <Button variant="outline" size="sm" onClick={() => signOut()}>
+              <Button variant="outline" size="sm" onClick={() => signOut()} className="h-10 w-10 p-0 border-zinc-800 hover:bg-red-500/10 hover:text-red-500 transition-colors">
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>

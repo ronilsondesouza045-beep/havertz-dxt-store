@@ -15,7 +15,7 @@ import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
 import { Modal } from '../../components/ui/Modal';
 
 export default function UserOrders() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingOrder, setDeletingOrder] = useState<Order | null>(null);
@@ -142,6 +142,13 @@ export default function UserOrders() {
                        {/* Header of the Card */}
                        <div className="p-5 md:p-6 flex flex-wrap items-center justify-between gap-4 border-b border-zinc-900 bg-zinc-900/20">
                           <div className="flex items-center gap-3">
+                             <div className="h-8 w-8 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center justify-center overflow-hidden shrink-0">
+                                {profile?.avatar_url || user?.photoURL ? (
+                                   <img src={profile?.avatar_url || user?.photoURL || ''} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                                ) : (
+                                   <div className="text-[10px] font-black text-neon-green">{user?.displayName?.charAt(0) || user?.email?.charAt(0) || 'U'}</div>
+                                )}
+                             </div>
                              <div className="flex items-center gap-2 bg-zinc-950 px-3 py-1.5 rounded-lg border border-zinc-800 shadow-inner">
                                 <Hash className="h-3 w-3 text-neon-green" />
                                 <span className="text-xs font-black text-zinc-300 font-mono tracking-tighter">{order.order_code}</span>

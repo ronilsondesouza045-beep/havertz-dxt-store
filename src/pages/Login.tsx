@@ -49,6 +49,7 @@ export default function Login() {
           id: user.uid,
           name: user.displayName || '',
           email: user.email || '',
+          avatar_url: user.photoURL || '',
           role: isAdminEmail(user.email || '') ? 'admin' : 'client',
           created_at: new Date().toISOString()
         };
