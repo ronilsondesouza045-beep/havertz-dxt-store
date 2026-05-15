@@ -25,7 +25,8 @@ import { Badge } from '../ui/Badge';
 import { format } from 'date-fns';
 import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
 import { safeDate } from '../../lib/utils';
-import { BOT_OPTIONS, BOT_MESSAGES, BotOption, NETFLIX_CONFIG } from '../../lib/botLogic';
+import axios from 'axios';
+import { BOT_OPTIONS, BOT_MESSAGES, BotOption, NETFLIX_CONFIG, getNetflixResponse } from '../../lib/botLogic';
 
 interface Message {
   id: string;
@@ -225,9 +226,25 @@ export function SupportChat() {
         );
         
         if (option) {
-          // Pick a random variation
-          const randomIndex = Math.floor(Math.random() * option.responses.length);
-          response = option.responses[randomIndex];
+          if (option.id === 'netflix_free') {
+            response = getNetflixResponse(null);
+          } else if (option.id === 'check_netflix_code') {
+            try {
+               // Show a loading indicator in a real app, here we just fetch
+               const codeRes = await axios.get('/api/netflix-code');
+               response = getNetflixResponse(codeRes.data.code);
+            } catch (err: any) {
+               if (err.response && err.response.status === 404) {
+                 response = "❌ Nenhum código novo foi encontrado nos últimos minutos.\n\nCertifique-se de clicar em 'Enviar Código' na Netflix antes de clicar aqui.";
+               } else {
+                response = "⚠️ Ocorreu um erro ao acessar o e-mail. Tente novamente em alguns segundos.";
+               }
+            }
+          } else {
+            // Pick a random variation
+            const randomIndex = Math.floor(Math.random() * option.responses.length);
+            response = option.responses[randomIndex];
+          }
         } else {
           response = BOT_MESSAGES.not_found;
         }

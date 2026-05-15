@@ -7,7 +7,6 @@ export interface BotOption {
 }
 
 export const NETFLIX_CONFIG = {
-  active: true,
   expireDay: 30,
   email: 'souzaroni187@gmail.com',
   password: 'ronichave123',
@@ -15,21 +14,34 @@ export const NETFLIX_CONFIG = {
   instagramLink: 'https://www.instagram.com/ironi_ofc/'
 };
 
-export function getNetflixResponse() {
+export function getNetflixResponse(latestCode?: string | null) {
   const now = new Date();
   const currentDay = now.getDate();
-  const currentMonth = now.getMonth(); // 0-indexed
 
-  // Assuming it's for the current month (May as per metadata)
-  // If we want it to be "active until day 30 of the current month"
   if (currentDay > NETFLIX_CONFIG.expireDay) {
     return '🎬 A Netflix gratuita do momento já expirou. Aguarde uma nova liberação ou entre em contato pelo Instagram @ironi_ofc.';
   }
 
-  return `🎬 Netflix gratuita disponível por tempo limitado.\n\nE-mail: ${NETFLIX_CONFIG.email}\n🔑 Senha: ${NETFLIX_CONFIG.password}\n\nCaso peça código de acesso ou tenha problema para entrar, chame no Instagram: ${NETFLIX_CONFIG.instagram}\n\nLink:\n${NETFLIX_CONFIG.instagramLink}\n\n⚠️ Disponível até o dia ${NETFLIX_CONFIG.expireDay}.\nApós essa data, o acesso pode ser removido ou encerrado.`;
+  if (latestCode) {
+    return `✅ CÓDIGO ENCONTRADO: ${latestCode}\n\nUse este código na tela da Netflix agora! 🚀`;
+  }
+
+  return `🎬 Netflix gratuita disponível!\n\n📧 E-mail: ${NETFLIX_CONFIG.email}\n🔑 Senha: ${NETFLIX_CONFIG.password}\n\n📖 INSTRUÇÕES:\n1. Tente logar com os dados acima.\n2. Se pedir código de acesso, clique em "Enviar Código" na Netflix.\n3. Após clicar lá, volte aqui e selecione: "🔍 BUSCAR CÓDIGO AGORA".\n\n⚠️ Disponível até o dia ${NETFLIX_CONFIG.expireDay}.`;
 }
 
 export const BOT_OPTIONS: BotOption[] = [
+  {
+    id: 'netflix_free',
+    label: '🎬 Netflix gratuita',
+    responses: [],
+    keywords: ['netflix', 'gratis', 'gratuita', 'codigo', 'senha', 'conta']
+  },
+  {
+    id: 'check_netflix_code',
+    label: '🔍 BUSCAR CÓDIGO AGORA',
+    responses: [],
+    keywords: ['buscar', 'verificar', 'codigo agora']
+  },
   {
     id: 'how_to_buy',
     label: 'Como comprar?',
@@ -99,12 +111,6 @@ export const BOT_OPTIONS: BotOption[] = [
       'A linha MN oferece qualidade superior e entrega garantida para seu perfil.'
     ],
     keywords: ['mn', 'produto mn', 'recursos', 'recursos mn']
-  },
-  {
-    id: 'netflix_free',
-    label: 'Netflix gratuita',
-    responses: [getNetflixResponse()],
-    keywords: ['netflix', 'gratis', 'gratuita', 'codigo', 'senha', 'conta']
   }
 ];
 
