@@ -220,7 +220,14 @@ export function SupportChat() {
         const option = BOT_OPTIONS.find(opt => 
           opt.keywords.some(kw => lowerText.includes(kw))
         );
-        response = option ? option.response : BOT_MESSAGES.not_found;
+        
+        if (option) {
+          // Pick a random variation
+          const randomIndex = Math.floor(Math.random() * option.responses.length);
+          response = option.responses[randomIndex];
+        } else {
+          response = BOT_MESSAGES.not_found;
+        }
       }
 
       await addDoc(collection(db, 'support_conversations', convId, 'messages'), {

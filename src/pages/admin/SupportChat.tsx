@@ -36,7 +36,8 @@ import {
   FileText,
   Bot,
   UserCheck,
-  Headphones
+  Headphones,
+  ArrowLeft
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -234,10 +235,10 @@ export default function AdminSupportChat() {
 
   return (
     <MainLayout>
-      <div className="container mx-auto py-12 px-4 h-[calc(100vh-120px)] flex flex-col">
+      <div className="container mx-auto py-4 md:py-12 px-0 md:px-4 h-[calc(100vh-64px)] md:h-[calc(100vh-120px)] flex flex-col">
         <audio ref={audioRef} src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" />
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+        <div className={`flex flex-col md:flex-row md:items-center justify-between mb-4 md:mb-8 gap-4 px-4 md:px-0 ${selectedConv ? 'hidden md:flex' : 'flex'}`}>
           <div>
             <h1 className="text-3xl font-black text-white italic uppercase flex items-center gap-3">
               CENTRAL DE SUPORTE 🧪
@@ -270,9 +271,9 @@ export default function AdminSupportChat() {
           </div>
         </div>
 
-        <div className="flex-1 flex gap-6 overflow-hidden min-h-0">
+        <div className="flex-1 flex flex-col md:flex-row gap-6 overflow-hidden min-h-0">
           {/* Conversation List */}
-          <Card className="w-full md:w-80 lg:w-96 bg-zinc-950 border-zinc-900 overflow-hidden flex flex-col">
+          <Card className={`w-full md:w-80 lg:w-96 bg-zinc-950 border-zinc-900 overflow-hidden flex flex-col ${selectedConv ? 'hidden md:flex' : 'flex'}`}>
             <div className="p-4 border-b border-zinc-900 bg-zinc-900/50">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Conversas</span>
@@ -285,25 +286,25 @@ export default function AdminSupportChat() {
                   <button
                     key={conv.id}
                     onClick={() => setSelectedConv(conv)}
-                    className={`w-full p-4 border-b border-zinc-900/50 flex flex-col gap-2 text-left transition-all ${
+                    className={`w-full p-6 md:p-4 border-b border-zinc-900/50 flex flex-col gap-2 text-left transition-all ${
                       selectedConv?.id === conv.id ? 'bg-zinc-900 border-l-2 border-l-neon-green' : 'hover:bg-zinc-900/30'
                     }`}
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex flex-col">
-                        <h4 className="font-bold text-white text-sm uppercase truncate max-w-[150px]">{conv.customer_name}</h4>
+                        <h4 className="font-bold text-white text-sm md:text-sm uppercase truncate max-w-[200px] md:max-w-[150px]">{conv.customer_name}</h4>
                         {conv.bot_active !== false && (
                           <div className="flex items-center gap-1 text-[8px] text-neon-green font-black uppercase italic mt-0.5">
                             <Bot size={8} /> Bot Ativo
                           </div>
                         )}
                       </div>
-                      <span className="text-[9px] text-zinc-600 font-bold italic">
+                      <span className="text-[10px] md:text-[9px] text-zinc-600 font-bold italic">
                         {conv.updated_at && format(safeDate(conv.updated_at), 'HH:mm')}
                       </span>
                     </div>
-                    <p className="text-xs text-zinc-500 line-clamp-1 italic">{conv.last_message}</p>
-                    <div className="flex items-center justify-between mt-1">
+                    <p className="text-sm md:text-xs text-zinc-500 line-clamp-2 md:line-clamp-1 italic">{conv.last_message}</p>
+                    <div className="flex items-center justify-between mt-2">
                       <Badge 
                         variant={
                           conv.status === 'aberta' ? 'red' : 
@@ -311,7 +312,7 @@ export default function AdminSupportChat() {
                           conv.status === 'resolvida' ? 'green' : 'gray'
                         }
                         size="xs"
-                        className="text-[8px]"
+                        className="text-[9px] md:text-[8px]"
                       >
                         {conv.status.toUpperCase()}
                       </Badge>
@@ -330,7 +331,7 @@ export default function AdminSupportChat() {
           </Card>
 
           {/* Chat Window */}
-          <Card className="flex-1 bg-zinc-950 border-zinc-900 flex flex-col overflow-hidden relative">
+          <Card className={`flex-1 bg-zinc-950 border-zinc-900 flex flex-col overflow-hidden relative ${!selectedConv ? 'hidden md:flex' : 'flex'}`}>
             {!selectedConv ? (
               <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
                 <div className="h-20 w-20 rounded-3xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-6">
@@ -353,40 +354,48 @@ export default function AdminSupportChat() {
               <>
                 {/* Chat Header */}
                 <div className="p-4 bg-zinc-900/50 border-b border-zinc-900 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setSelectedConv(null)}
+                      className="md:hidden p-1 min-w-0 h-10 w-10 text-zinc-500"
+                    >
+                      <ArrowLeft size={20} />
+                    </Button>
+                    <div className="h-10 w-10 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center hidden sm:flex">
                       <User className="text-zinc-400 h-5 w-5" />
                     </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-white uppercase">{selectedConv.customer_name}</h3>
+                    <div className="min-w-0">
+                      <h3 className="text-xs md:text-sm font-bold text-white uppercase truncate">{selectedConv.customer_name}</h3>
                       <div className="flex items-center gap-2">
-                        <p className="text-[10px] text-zinc-500 font-medium">{selectedConv.customer_email}</p>
+                        <p className="text-[10px] text-zinc-500 font-medium truncate">{selectedConv.customer_email}</p>
                         {selectedConv.bot_active !== false && (
-                          <Badge variant="outline" className="text-[7px] border-neon-green/30 text-neon-green h-4">BOT ATIVO</Badge>
+                          <Badge variant="outline" className="text-[7px] border-neon-green/30 text-neon-green h-4 hidden xs:inline-flex">BOT ATIVO</Badge>
                         )}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 md:gap-2">
                     {selectedConv.bot_active !== false && (
                       <Button 
                         variant="neon" 
                         size="sm" 
                         onClick={takeOverConversation}
-                        className="h-8 py-0 text-[9px] font-black italic uppercase px-3 shadow-none"
+                        className="h-8 md:h-8 py-0 text-[8px] md:text-[9px] font-black italic uppercase px-2 md:px-3 shadow-none"
                       >
-                        ASSUMIR CHAT <UserCheck className="ml-1.5 h-3 w-3" />
+                        ASSUMIR <span className="hidden md:inline ml-1">CHAT</span> <UserCheck className="ml-1 md:ml-1.5 h-3 w-3" />
                       </Button>
                     )}
                     <select
                       value={selectedConv.status}
                       onChange={(e) => updateStatus(e.target.value as any)}
-                      className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-[10px] font-black text-white uppercase italic focus:outline-none"
+                      className="bg-zinc-800 border border-zinc-700 rounded-lg px-2 py-1.5 text-[10px] font-black text-white uppercase italic focus:outline-none max-w-[80px] md:max-w-none"
                     >
-                      <option value="aberta">Aberta</option>
-                      <option value="respondida">Respondida</option>
-                      <option value="resolvida">Resolvida</option>
-                      <option value="fechada">Fechada</option>
+                      <option value="aberta">Abert.</option>
+                      <option value="respondida">Resp.</option>
+                      <option value="resolvida">Resolv.</option>
+                      <option value="fechada">Fech.</option>
                     </select>
                     <Button 
                       variant="outline" 
@@ -402,7 +411,7 @@ export default function AdminSupportChat() {
                 {/* Messages Panel */}
                 <div 
                   ref={scrollRef}
-                  className="flex-1 overflow-y-auto p-6 space-y-6 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"
+                  className="flex-1 overflow-y-auto p-6 pb-24 md:pb-6 space-y-6 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"
                 >
                   {messages.map((msg) => (
                     <div 
@@ -471,21 +480,21 @@ export default function AdminSupportChat() {
                 </div>
 
                 {/* Input Panel */}
-                <div className="p-4 bg-zinc-900/50 border-t border-zinc-900">
+                <div className="p-4 bg-zinc-900 border-t border-zinc-900 fixed md:relative bottom-0 md:bottom-0 left-0 right-0 z-20 md:z-auto">
                   <form onSubmit={handleSendMessage} className="flex gap-3">
                     <input
                       type="text"
                       value={newMessage}
                       onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
-                      placeholder="Digite sua resposta mestre..."
-                      className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-neon-green/30"
+                      placeholder="Resposta..."
+                      className="flex-1 bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-4 md:py-3 text-white text-sm focus:outline-none focus:border-neon-green/30 font-medium"
                     />
                     <Button 
                       type="submit" 
                       disabled={!newMessage.trim() || isLoading}
-                      className="bg-neon-green text-black hover:bg-neon-green/90 font-black italic px-6"
+                      className="bg-neon-green text-black hover:bg-neon-green/90 font-black italic px-4 md:px-6 rounded-2xl h-12 md:h-auto"
                     >
-                      {isLoading ? <Loader2 className="animate-spin" /> : <><Send className="mr-2 h-4 w-4" /> ENVIAR</>}
+                      {isLoading ? <Loader2 className="animate-spin" /> : <><Send className="md:mr-2 h-4 w-4" /> <span className="hidden md:inline">ENVIAR</span></>}
                     </Button>
                   </form>
                 </div>
