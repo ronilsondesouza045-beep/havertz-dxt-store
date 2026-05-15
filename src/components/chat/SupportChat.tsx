@@ -235,7 +235,7 @@ export function SupportChat() {
                response = getNetflixResponse(codeRes.data.code);
             } catch (err: any) {
                if (err.response && err.response.status === 404) {
-                 response = "❌ Nenhum código novo foi encontrado nos últimos minutos.\n\nCertifique-se de clicar em 'Enviar Código' na Netflix antes de clicar aqui.";
+                 response = "❌ Nenhum código novo da Netflix foi encontrado nos últimos 60 minutos.\n\nCertifique-se de:\n1. Clicar em 'Enviar Código' na Netflix.\n2. Aguardar 10-15 segundos.\n3. Clicar novamente em 'BUSCAR CÓDIGO AGORA'.";
                } else {
                 response = "⚠️ Ocorreu um erro ao acessar o e-mail. Tente novamente em alguns segundos.";
                }

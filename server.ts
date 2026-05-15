@@ -26,18 +26,19 @@ async function getLatestNetflixCode() {
     await client.connect();
     let lock = await client.getMailboxLock("INBOX");
     try {
-      // Search for emails in the last 10 minutes for better "real-time" feel
+      // Search for emails in the last 60 minutes
+      const sixtyMinutesAgo = new Date(Date.now() - 60 * 60 * 1000);
+      
       let messages = await client.search({
-        from: "info@account.netflix.com",
-        since: new Date(Date.now() - 10 * 60 * 1000),
+        or: [
+          { from: "info@account.netflix.com" },
+          { from: "info@mailer.netflix.com" },
+          { from: "netflix@netflix.com" },
+          { subject: "Netflix" },
+          { body: "seu código de acesso" }
+        ],
+        since: sixtyMinutesAgo,
       });
-
-      if (!messages || messages.length === 0) {
-        messages = await client.search({
-          subject: "Netflix",
-          since: new Date(Date.now() - 10 * 60 * 1000),
-        });
-      }
 
       if (!messages || messages.length === 0) {
         return null;
@@ -53,16 +54,43 @@ async function getLatestNetflixCode() {
 
       let parsed = await simpleParser(message.source);
       
-      const content = parsed.text || "";
+      const text = parsed.text || "";
+      const html = parsed.html || "";
       const subject = parsed.subject || "";
       
       // Netflix codes are usually 4 digits for PIN or 6 digits for access
-      // Pattern: "Seu código da Netflix é 123456" or similar
-      const combined = (subject + " " + content).toLowerCase();
+      const combined = (subject + " " + text + " " + html).toLowerCase();
       
-      // Look for 4 or 6 digit numbers that look like codes
-      // Often surrounded by spaces or in the middle of text
-      const codeMatch = combined.match(/\b\d{4}\b/) || combined.match(/\b\d{6}\b/);
+      // Look for 4 or 6 digit numbers. 
+      // We avoid catching years like 2024, 2025 by checking the context or just taking the most likely one.
+      // Usually the code is prominently displayed.
+      
+      // Try to find 6 consecutive digits first (common for sign-in)
+      let codeMatch = combined.match(/\b\d{6}\b/);
+      
+      // If not found, try 4 digits (common for PIN)
+      if (!codeMatch) {
+         codeMatch = combined.match(/\b\d{4}\b/);
+      }
+      
+      // If still not found, search for codes with a space in the middle like "123 456"
+      if (!codeMatch) {
+         const spaceMatch = combined.match(/\b\d{3}\s\d{3}\b/);
+         if (spaceMatch) {
+           return spaceMatch[0].replace(/\s/g, '');
+         }
+      }
+
+      // Check if the found code is a year (loose filter)
+      if (codeMatch && (codeMatch[0] === "2024" || codeMatch[0] === "2025" || codeMatch[0] === "2026")) {
+        // Look for another one if this is just the year
+        const matches = combined.matchAll(/\b\d{4}\b/g);
+        for (const m of matches) {
+          if (m[0] !== "2024" && m[0] !== "2025" && m[0] !== "2026") {
+            return m[0];
+          }
+        }
+      }
       
       return codeMatch ? codeMatch[0] : null;
 
