@@ -6,14 +6,37 @@ export interface BotOption {
   keywords: string[];
 }
 
+export const NETFLIX_CONFIG = {
+  active: true,
+  expireDay: 30,
+  email: 'souzaroni187@gmail.com',
+  password: 'ronichave123',
+  instagram: '@ironi_ofc',
+  instagramLink: 'https://www.instagram.com/ironi_ofc/'
+};
+
+export function getNetflixResponse() {
+  const now = new Date();
+  const currentDay = now.getDate();
+  const currentMonth = now.getMonth(); // 0-indexed
+
+  // Assuming it's for the current month (May as per metadata)
+  // If we want it to be "active until day 30 of the current month"
+  if (currentDay > NETFLIX_CONFIG.expireDay) {
+    return '🎬 A Netflix gratuita do momento já expirou. Aguarde uma nova liberação ou entre em contato pelo Instagram @ironi_ofc.';
+  }
+
+  return `🎬 Netflix gratuita disponível por tempo limitado.\n\nE-mail: ${NETFLIX_CONFIG.email}\n🔑 Senha: ${NETFLIX_CONFIG.password}\n\nCaso peça código de acesso ou tenha problema para entrar, chame no Instagram: ${NETFLIX_CONFIG.instagram}\n\nLink:\n${NETFLIX_CONFIG.instagramLink}\n\n⚠️ Disponível até o dia ${NETFLIX_CONFIG.expireDay}.\nApós essa data, o acesso pode ser removido ou encerrado.`;
+}
+
 export const BOT_OPTIONS: BotOption[] = [
   {
     id: 'how_to_buy',
-    label: 'Comprar',
+    label: 'Como comprar?',
     responses: [
-      'Escolha um catálogo no site, selecione o produto, preencha os dados e gere seu pedido. O Pix aparece no final!',
-      'Para comprar, navegue pelos nossos catálogos, selecione o item desejado e siga o checkout. É rápido e seguro.',
-      'Boa! O passo a passo é simples: escolha o catálogo, preencha seus dados corretamente e gere o pedido no site.'
+      'Escolha o catálogo, preencha os dados corretamente, crie o pedido, faça o Pix e envie o comprovante no Instagram oficial @havertz.dxt.',
+      'O processo é simples: escolha o catálogo, preencha seus dados, gere o pedido e mande o comprovante no insta @havertz.dxt.',
+      'Boa! Selecione seu produto no catálogo, preencha os dados e finalize o pedido. Depois envie o comprovante no Instagram @havertz.dxt.'
     ],
     keywords: ['comprar', 'como comprar', 'adquirir', 'pedido', 'compra']
   },
@@ -21,9 +44,9 @@ export const BOT_OPTIONS: BotOption[] = [
     id: 'pix_info',
     label: 'Pix',
     responses: [
-      'A chave Pix (Copia e Cola ou QR Code) aparece no checkout logo após você criar o pedido. Copie e pague no seu banco.',
-      'Sem problema! Logo após finalizar o pedido no site, a chave Pix será gerada automaticamente para você.',
-      'O pagamento é via Pix. A chave exclusiva do seu pedido aparece na última tela após a confirmação.'
+      'A chave Pix aparece no checkout logo após você criar o seu pedido.',
+      'Basta finalizar o pedido que o sistema mostra a chave Pix (Copia e Cola) na hora!',
+      'O pagamento é via Pix. A chave exclusiva do seu pedido aparece na última tela do checkout.'
     ],
     keywords: ['pix', 'pagamento', 'chave', 'pagar', 'efetuar']
   },
@@ -31,49 +54,29 @@ export const BOT_OPTIONS: BotOption[] = [
     id: 'receipt',
     label: 'Comprovante',
     responses: [
-      'Envie o comprovante no nosso Instagram oficial @havertz.dxt informando o número do pedido para agilizar.',
-      'Após pagar, mande o print do comprovante lá no Direct do @havertz.dxt junto com o código do seu pedido.',
-      'O comprovante deve ser enviado no Instagram @havertz.dxt. Isso ajuda nossa equipe a localizar sua compra na hora!'
+      'Envie o comprovante no Instagram @havertz.dxt com o número do pedido. Isso agiliza muito o atendimento!',
+      'Mande o print do comprovante lá no Direct do @havertz.dxt informando o código da compra.',
+      'O comprovante deve ser enviado no nosso Instagram oficial @havertz.dxt junto com o ID do pedido.'
     ],
     keywords: ['comprovante', 'enviar print', 'mandei o pix', 'print', 'comprovar', 'mandei']
   },
   {
     id: 'delivery',
-    label: 'Prazo',
+    label: 'Prazo de entrega',
     responses: [
-      'Após a confirmação do pagamento, seu pedido entra em fila de análise e a entrega é iniciada o mais rápido possível.',
-      'O prazo varia conforme a demanda, mas costumamos entregar rapidamente assim que o Pix é confirmado.',
-      'Fique tranquilo! Assim que o sistema reconhecer seu pagamento, nossa equipe inicia o processamento da entrega.'
+      'Após a confirmação do pagamento, o pedido entra em análise e a entrega é iniciada o mais rápido possível.',
+      'Nosso prazo costuma ser rápido. Assim que seu Pix for confirmado, o pedido já entra em processamento.',
+      'O prazo varia conforme a fila, mas entregamos tudo com segurança após a validação do pagamento.'
     ],
     keywords: ['prazo', 'tempo', 'demora', 'quando chega', 'entrega', 'demorar']
-  },
-  {
-    id: 'order_status',
-    label: 'Status do pedido',
-    responses: [
-      'Você pode acompanhar tudo em "Meus Pedidos". Lá você vê se está aguardando, em análise ou entregue.',
-      'Consulte a aba de pedidos na sua conta para ver o status em tempo real da sua compra.',
-      'No menu lateral, clique em "Meus Pedidos" para rastrear o progresso da sua entrega agora mesmo.'
-    ],
-    keywords: ['status', 'meu pedido', 'rastrear', 'onde esta', 'progresso', 'situacao']
-  },
-  {
-    id: 'imvu_credits',
-    label: 'Créditos IMVU',
-    responses: [
-      'Para créditos IMVU, certifique-se de informar o @nick correto. Temos opções via Direto e via Presente!',
-      'Os créditos IMVU são entregues diretamente na sua conta. Escolha entre Direto ou Presente no catálogo.',
-      'IMVU é nossa especialidade! Informe o nick exato do avatar para que a entrega ocorra sem erros.'
-    ],
-    keywords: ['imvu', 'creditos', 'fichas', 'avatar', 'direto', 'presente']
   },
   {
     id: 'free_fire',
     label: 'Free Fire',
     responses: [
-      'Para Free Fire, precisamos do seu ID de jogador. Confira bem os números antes de finalizar o pedido.',
-      'Diamantes no FF? Basta informar o ID no formulário de compra. A recarga cai conforme o prazo informado.',
-      'Certifique-se de ter digitado o ID do FF corretamente. IDs errados não podem ser estornados pela Garena.'
+      'Para Free Fire, informe o ID do jogador corretamente no formulário de compra.',
+      'Recarga de Dimas? Basta informar o ID certinho para que o sistema processe sua entrega.',
+      'Atenção mestre: confira seu ID do Free Fire antes de finalizar o pedido!'
     ],
     keywords: ['free fire', 'ff', 'diamantes', 'dimas', 'id', 'recarga']
   },
@@ -81,9 +84,9 @@ export const BOT_OPTIONS: BotOption[] = [
     id: 'followers',
     label: 'Seguidores',
     responses: [
-      'Para seguidores, envie o @perfil ou @nick do Instagram. Lembre-se de deixar o perfil PÚBLICO durante a entrega.',
-      'Alavanque seu Insta! Informe o perfil correto e aguarde o processamento iniciado pelo sistema.',
-      'Temos seguidores de alta qualidade. Informe o link ou @nick do perfil e não mude o nome durante a entrega.'
+      'Para pedidos de seguidores, informe corretamente o @perfil ou @nick do Instagram.',
+      'Quer bombar o Insta? Informe o seu @perfil e lembre-se de deixá-lo público durante o envio.',
+      'Selecione o pacote, informe o @perfil desejado e aguarde a mágica acontecer!'
     ],
     keywords: ['seguidores', 'instagram', 'insta', 'seguidor', 'perfil', 'popularidade']
   },
@@ -91,16 +94,22 @@ export const BOT_OPTIONS: BotOption[] = [
     id: 'mn_products',
     label: 'Produtos MN',
     responses: [
-      'Nossos produtos MN são exclusivos e de alta qualidade. Escolha o seu recurso preferido no catálogo.',
-      'A linha MN oferece os melhores recursos para sua conta. Confira a disponibilidade no site.',
-      'Recursos MN garantidos! Selecione o pacote desejado e siga as instruções de identificação.'
+      'Nossos produtos MN são exclusivos e de alta qualidade. Confira as opções no catálogo do site.',
+      'Os melhores recursos MN você encontra aqui. Escolha o seu e garanta sua vantagem.',
+      'A linha MN oferece qualidade superior e entrega garantida para seu perfil.'
     ],
     keywords: ['mn', 'produto mn', 'recursos', 'recursos mn']
+  },
+  {
+    id: 'netflix_free',
+    label: 'Netflix gratuita',
+    responses: [getNetflixResponse()],
+    keywords: ['netflix', 'gratis', 'gratuita', 'codigo', 'senha', 'conta']
   }
 ];
 
 export const BOT_MESSAGES = {
-  welcome: 'Olá 👋 Eu sou o DXT Assistente. Posso te ajudar com compras, Pix, comprovante, prazos e status do pedido.',
-  switching_to_human: 'Certo! Vou deixar sua conversa disponível para atendimento manual. Por favor, envie sua dúvida e aguarde a equipe responder.',
-  not_found: 'Não consegui identificar sua dúvida. Escolha uma das opções abaixo ou clique em "Falar com atendente".',
+  welcome: 'Olá 👋 Bem-vindo ao suporte HAVERTZ.DXT. Escolha uma opção abaixo ou envie sua dúvida.',
+  switching_to_human: 'Certo! Vou deixar sua conversa disponível para atendimento manual. Aguarde a equipe responder.',
+  not_found: 'Não entendi totalmente sua dúvida. Você pode escolher uma opção abaixo ou clicar em "Falar com atendente".',
 };

@@ -25,7 +25,7 @@ import { Badge } from '../ui/Badge';
 import { format } from 'date-fns';
 import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
 import { safeDate } from '../../lib/utils';
-import { BOT_OPTIONS, BOT_MESSAGES, BotOption } from '../../lib/botLogic';
+import { BOT_OPTIONS, BOT_MESSAGES, BotOption, NETFLIX_CONFIG } from '../../lib/botLogic';
 
 interface Message {
   id: string;
@@ -414,7 +414,7 @@ export function SupportChat() {
                             msg.sender_type === 'client' ? 'bg-zinc-900 border border-zinc-800 text-white rounded-tr-none' : msg.sender_type === 'bot' ? 'bg-zinc-900/80 border border-neon-green/20 text-zinc-100 rounded-tl-none' : 'bg-zinc-900/80 border border-neon-purple/20 text-zinc-100 rounded-tl-none'
                           }`}>
                             {msg.image_url && <img src={msg.image_url} alt="Upload" className="w-full max-h-64 object-cover rounded-xl mb-3 border border-zinc-800" />}
-                            <p className="leading-relaxed font-medium italic">{msg.message}</p>
+                            <p className="leading-relaxed font-medium italic whitespace-pre-wrap">{msg.message}</p>
                           </div>
                           <div className="flex items-center gap-1.5 opacity-30 text-[8px] font-black italic tracking-widest uppercase px-1">
                             {msg.created_at && format(new Date(msg.created_at), 'HH:mm')}
@@ -440,16 +440,32 @@ export function SupportChat() {
                     )}
 
                     {conversation.bot_active !== false && !botTyping && !isLoading && (
-                      <div className="flex flex-col gap-2 pt-4">
-                        <p className="text-[9px] text-zinc-600 font-black uppercase tracking-[0.3em] mb-1 px-1">Respostas Rápidas</p>
-                        <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-col gap-3 pt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="flex items-center justify-between px-1">
+                          <p className="text-[10px] text-zinc-600 font-black uppercase tracking-[0.3em]">Menu de Ajuda</p>
+                          {NETFLIX_CONFIG.active && new Date().getDate() <= NETFLIX_CONFIG.expireDay && (
+                             <Badge variant="neon" className="text-[7px] animate-pulse">NOVO</Badge>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
                           {BOT_OPTIONS.map(opt => (
-                            <button key={opt.id} onClick={() => handleSendMessage(undefined, opt.label)} className="px-4 py-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-[10px] text-zinc-400 font-bold italic uppercase hover:border-neon-green/40 hover:text-white transition-all">
+                            <button 
+                              key={opt.id} 
+                              onClick={() => handleSendMessage(undefined, opt.label)} 
+                              className={`px-4 py-4 md:py-3 bg-zinc-900 border border-zinc-800 rounded-2xl text-[10px] md:text-[11px] font-black italic uppercase transition-all active:scale-95 text-zinc-400 hover:border-neon-green/40 hover:text-white ${
+                                opt.id === 'netflix_free' ? 'border-amber-500/30 text-amber-500/70 hover:border-amber-500' : ''
+                              }`}
+                            >
                               {opt.label}
                             </button>
                           ))}
-                          <button onClick={() => handleSendMessage(undefined, 'Falar com atendente')} className="px-4 py-2.5 bg-zinc-900 border border-neon-purple/20 rounded-xl text-[10px] text-neon-purple font-black italic uppercase hover:bg-neon-purple/10 transition-all">
-                            Falar com atendente
+                          <button 
+                            onClick={() => handleSendMessage(undefined, 'Falar com atendente')} 
+                            className="col-span-2 px-4 py-4 md:py-3 bg-zinc-900 border border-neon-purple/20 rounded-2xl text-[10px] md:text-[11px] text-neon-purple font-black italic uppercase hover:bg-neon-purple/10 transition-all active:scale-95"
+                          >
+                            <span className="flex items-center justify-center gap-2">
+                              Falar com atendente <Headphones size={12} />
+                            </span>
                           </button>
                         </div>
                       </div>
