@@ -122,19 +122,20 @@ export default function MNProducts() {
                     transition={{ delay: i * 0.05 }}
                   >
                     <Card className="group hover:border-zinc-700 bg-zinc-950/50">
-                      {(section.title === 'N. FEMININOS' || section.title === 'N. MASCULINOS' || section.title === 'SALAS') && (
-                        <div className="mb-4 aspect-video rounded-xl overflow-hidden border border-zinc-900 bg-zinc-900/50">
-                          <img 
-                            src={section.title === 'SALAS' 
-                              ? "https://i.ytimg.com/vi/ztlWgpX4K_Q/maxresdefault.jpg" 
-                              : "https://conteudo.imguol.com.br/c/entretenimento/09/2017/02/17/theon-alfie-allen-fica-nu-em-game-of-thrones---nsfw-1487356056824_v2_750x421.jpg"
-                            } 
-                            alt={`${product.name} Preview`}
-                            className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                            referrerPolicy="no-referrer"
-                          />
-                        </div>
-                      )}
+                      <div className={`mb-4 rounded-xl overflow-hidden border border-zinc-900 bg-zinc-900/50 ${section.title === 'POSES' ? 'aspect-square p-2' : 'aspect-video'}`}>
+                        <img 
+                          src={
+                            product.image_url || (
+                              section.title === 'SALAS' 
+                                ? "https://i.ytimg.com/vi/ztlWgpX4K_Q/maxresdefault.jpg" 
+                                : "https://conteudo.imguol.com.br/c/entretenimento/09/2017/02/17/theon-alfie-allen-fica-nu-em-game-of-thrones---nsfw-1487356056824_v2_750x421.jpg"
+                            )
+                          } 
+                          alt={`${product.name} Preview`}
+                          className={`w-full h-full transition-opacity opacity-80 group-hover:opacity-100 ${section.title === 'POSES' ? 'object-contain' : 'object-cover'}`}
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
                       <div className="mb-4 flex justify-between items-start">
                         <h3 className="text-lg font-bold text-white uppercase">{product.name}</h3>
                         <Badge variant="outline" className="border-zinc-800 text-zinc-600">MN</Badge>

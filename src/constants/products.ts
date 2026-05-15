@@ -12,6 +12,7 @@ export const PRODUCTS_DIRETO: Product[] = amounts.map(amount => ({
   price: amount * PRICE_DIRETO_PER_K,
   type: 'DIRETO',
   category: 'credits',
+  image_url: 'https://cdn.ggmax.com.br/images/29c87cbd933f1052375054c66e359579.sm.jpg',
   requirements: { imvu_nick: true }
 }));
 

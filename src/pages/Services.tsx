@@ -38,6 +38,7 @@ export default function Services() {
     if (name.includes('free fire') || name.includes('dimas') || cat === 'free_fire') return "https://wallpapercave.com/wp/wp5195928.jpg";
     if (name.includes('instagram')) return "https://i.pinimg.com/originals/ca/2b/d1/ca2bd1b89bf7f1abb0c4fc3028de3377.jpg";
     if (name.includes('globoplay') || name.includes('globo play')) return "https://i1.wp.com/gkpb.com.br/wp-content/uploads/2020/08/globoplay-mais-canais-ao-vivo-logo.jpg?resize=803%2C420&ssl=1"
+    if (name.includes('seguidores imvu') || (name.includes('seguidores') && name.includes('imvu'))) return "https://i.ytimg.com/vi/1ZbmOEkalrc/hqdefault.jpg";
     
     return null;
   };

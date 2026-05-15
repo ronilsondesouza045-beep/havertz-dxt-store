@@ -19,6 +19,7 @@ export default function Followers() {
   const getProductImage = (product: any) => {
     const name = product.name.toLowerCase();
     if (name.includes('instagram')) return "https://i.pinimg.com/originals/ca/2b/d1/ca2bd1b89bf7f1abb0c4fc3028de3377.jpg";
+    if (name.includes('imvu')) return "https://i.ytimg.com/vi/1ZbmOEkalrc/hqdefault.jpg";
     return null;
   };
 

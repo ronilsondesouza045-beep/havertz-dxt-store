@@ -1,9 +1,9 @@
 import { Product } from '../types';
 
 export const POSES_MN: Product[] = [
-  { id: 'mn-pose-avulsa', name: 'Pose Avulsa', price: 7.90, category: 'produto_mn', type: 'POSES', requirements: { imvu_nick: true } },
-  { id: 'mn-pose-trisal', name: 'Pacote Trisal', price: 21.90, category: 'produto_mn', type: 'POSES', requirements: { imvu_nick: true } },
-  { id: 'mn-pose-carro-sofa', name: 'Carro/Sofá', price: 10.90, category: 'produto_mn', type: 'POSES', requirements: { imvu_nick: true } },
+  { id: 'mn-pose-avulsa', name: 'Pose Avulsa', price: 7.90, category: 'produto_mn', type: 'POSES', image_url: 'https://blackmarketvu.com/wp-content/uploads/2022/12/pose-v-p-005-black-market-imvu-poses-1.png', requirements: { imvu_nick: true } },
+  { id: 'mn-pose-trisal', name: 'Pacote Trisal', price: 21.90, category: 'produto_mn', type: 'POSES', image_url: 'https://blackmarketvu.com/wp-content/uploads/2022/12/pose-v-p-005-black-market-imvu-poses-1.png', requirements: { imvu_nick: true } },
+  { id: 'mn-pose-carro-sofa', name: 'Carro/Sofá', price: 10.90, category: 'produto_mn', type: 'POSES', image_url: 'https://blackmarketvu.com/wp-content/uploads/2022/12/pose-v-p-005-black-market-imvu-poses-1.png', requirements: { imvu_nick: true } },
 ];
 
 export const N_FEMININO_MN: Product[] = [

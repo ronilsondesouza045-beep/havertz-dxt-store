@@ -129,7 +129,7 @@ export default function Register() {
           <form onSubmit={handleRegister} className="space-y-5">
             <Input
               label="Nome Completo"
-              placeholder="Ex: Ronilson de Souza"
+              placeholder="Seu nome completo"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
