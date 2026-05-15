@@ -76,6 +76,8 @@ interface Message {
 
 export default function AdminSupportChat() {
   const { user } = useAuth();
+  const isAdminUser = user?.email?.toLowerCase() === 'havertz.dxt@gmail.com' || user?.email?.toLowerCase() === 'ronilsondesouza045@gmail.com';
+
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConv, setSelectedConv] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -88,6 +90,8 @@ export default function AdminSupportChat() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
+    if (!isAdminUser) return;
+
     const convsRef = collection(db, 'support_conversations');
     const q = query(convsRef, orderBy('updated_at', 'desc'));
 
@@ -107,7 +111,22 @@ export default function AdminSupportChat() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [isAdminUser]);
+
+  if (!isAdminUser && user) {
+    return (
+      <MainLayout>
+        <div className="container mx-auto py-24 px-4 text-center">
+          <div className="inline-flex items-center justify-center h-20 w-20 rounded-full bg-red-500/10 border border-red-500/20 mb-6 text-red-500">
+             <Headphones size={40} />
+          </div>
+          <h1 className="text-3xl font-black text-white italic uppercase mb-4">ACESSO NEGADO</h1>
+          <p className="text-zinc-500 max-w-md mx-auto mb-8 font-medium">Você não tem permissões de administrador para gerenciar o suporte.</p>
+          <Button variant="neon" onClick={() => window.location.href = '/'}>VOLTAR AO INÍCIO</Button>
+        </div>
+      </MainLayout>
+    );
+  }
 
   useEffect(() => {
     if (selectedConv) {
