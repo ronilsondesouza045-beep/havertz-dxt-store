@@ -36,12 +36,13 @@ service cloud.firestore {
 
     function isValidConversation(data) {
       return data.get('customer_email', '') is string && data.get('customer_email', '').size() <= 256 &&
-             data.get('status', '') in ['aberta', 'respondida', 'fechada', 'resolvida'];
+             data.get('status', '') in ['aberta', 'respondida', 'fechada', 'resolvida', 'pendente'] &&
+             (data.get('bot_active', true) is bool);
     }
 
     function isValidMessage(data) {
       return (data.get('conversation_id', '') is string && data.get('conversation_id', '').size() <= 128) &&
-             (data.get('sender_type', '') in ['admin', 'client']) &&
+             (data.get('sender_type', '') in ['admin', 'client', 'bot']) &&
              (data.get('message', '') is string && data.get('message', '').size() <= 10000);
     }
 
@@ -102,8 +103,9 @@ service cloud.firestore {
         isAdmin() || 
         resource.data.get('user_id', null) == request.auth.uid
       );
-      allow create: if (isSignedIn() && isOwner(incoming().get('user_id', null))) || (!isSignedIn() && incoming().get('user_id', null) == null);
-      allow update: if isAdmin() || existing().get('user_id', null) == null || (isSignedIn() && existing().get('user_id', null) == request.auth.uid);
+      allow create: if ((isSignedIn() && isOwner(incoming().get('user_id', null))) || (!isSignedIn() && incoming().get('user_id', null) == null)) && isValidConversation(incoming());
+      allow update: if (isAdmin() || existing().get('user_id', null) == null || (isSignedIn() && existing().get('user_id', null) == request.auth.uid)) && isValidConversation(incoming());
+      allow delete: if isAdmin();
     }
 
     match /support_conversations/{conversationId}/messages/{messageId} {

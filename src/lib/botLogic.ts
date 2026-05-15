@@ -9,46 +9,50 @@ export interface BotOption {
 export const BOT_OPTIONS: BotOption[] = [
   {
     id: 'how_to_buy',
-    label: 'Como comprar créditos?',
-    response: 'Para comprar, escolha o catálogo desejado (Créditos IMVU, Free Fire, etc), preencha seus dados corretamente e gere o pedido. O pagamento é via Pix e a chave aparece logo após finalizar.',
-    keywords: ['comprar', 'créditos', 'como comprar', 'adquirir']
+    label: 'Como comprar?',
+    response: 'Escolha um catálogo no site, preencha os dados corretamente, gere o pedido e envie o comprovante no Instagram @havertz.dxt.',
+    keywords: ['comprar', 'como comprar', 'adquirir', 'pedido']
   },
   {
     id: 'pix_info',
-    label: 'Como funciona o Pix?',
-    response: 'O sistema gera uma chave Pix (Copia e Cola ou QR Code) exclusiva para o seu pedido. Após pagar, o sistema reconhece e inicia o processamento.',
-    keywords: ['pix', 'pagamento', 'chave', 'qr code', 'pagar']
+    label: 'Como funciona Pix?',
+    response: 'A chave Pix (Copia e Cola ou QR Code) aparece no checkout logo após você criar o seu pedido no site.',
+    keywords: ['pix', 'pagamento', 'chave', 'pagar']
   },
   {
     id: 'receipt',
     label: 'Como envio comprovante?',
-    response: 'Após o pagamento, envie o comprovante no nosso Instagram oficial @havertz.dxt informando o código do seu pedido para agilizar a conferência.',
-    keywords: ['comprovante', 'enviar print', 'mandei o pix', 'print']
+    response: 'O comprovante deve ser enviado no nosso Instagram oficial @havertz.dxt junto com o número do seu pedido.',
+    keywords: ['comprovante', 'enviar print', 'mandei o pix', 'print', 'comprovar']
   },
   {
     id: 'delivery',
     label: 'Prazo de entrega',
-    response: 'O prazo varia conforme o produto. Créditos IMVU costumam cair em minutos após aprovação. Outros serviços podem levar até 24h úteis.',
+    response: 'Após a confirmação do pagamento, o pedido entra em análise e a entrega é iniciada. O prazo varia conforme o produto.',
     keywords: ['prazo', 'tempo', 'demora', 'quando chega', 'entrega']
   },
   {
     id: 'free_fire',
-    label: 'Suporte Free Fire',
-    response: 'Certifique-se de ter enviado o ID do jogador corretamente. Pedidos com ID errado não podem ser estornados.',
+    label: 'Free Fire',
+    response: 'Para pedidos de Free Fire, envie corretamente o ID do jogador para evitar erros no processamento.',
     keywords: ['free fire', 'ff', 'diamantes', 'dimas', 'id']
   },
   {
-    id: 'order_status',
-    label: 'Ver status do meu pedido',
-    response: 'Por favor, digite o código do seu pedido (Ex: #HVZ-123456) para que eu verifique no laboratório.',
-    keywords: ['status', 'meu pedido', 'onde esta', 'rastrear', 'codigo']
+    id: 'followers',
+    label: 'Seguidores',
+    response: 'Para pedidos de seguidores, envie corretamente o @perfil ou @nick do Instagram.',
+    keywords: ['seguidores', 'instagram', 'insta', 'seguidor', 'perfil']
+  },
+  {
+    id: 'mn_products',
+    label: 'Produtos MN',
+    response: 'Nossos produtos MN são de alta qualidade e entrega garantida. Escolha o seu no catálogo do site.',
+    keywords: ['mn', 'produto mn', 'recursos']
   }
 ];
 
 export const BOT_MESSAGES = {
   welcome: 'Olá 👋 Bem-vindo ao suporte HAVERTZ.DXT. Eu sou o DXT Assistente. Escolha uma opção abaixo ou envie sua dúvida.',
-  switching_to_human: 'Entendido! Estou transferindo você para um de nossos operadores humanos. Por favor, aguarde um momento...',
+  switching_to_human: 'Entendido! Estou transferindo você para um de nossos operadores. Por favor, envie sua dúvida e aguarde.',
   not_found: 'Não consegui identificar sua dúvida. Escolha uma das opções abaixo ou digite "atendente" para falar com um humano.',
-  order_info: (code: string, status: string) => `Localizei seu pedido ${code}! O status atual é: ${status.toUpperCase()}.`,
-  order_not_found: 'Não encontrei nenhum pedido com esse código no sistema. Verifique se digitou corretamente.',
 };
