@@ -28,42 +28,82 @@ async function getLatestNetflixCode() {
       let messages = await client.search({
         or: [
           { from: "netflix.com" },
-          { from: "info@account.netflix.com" },
-          { subject: "Netflix" }
+          { from: "mailer.netflix.com" },
+          { from: "account.netflix.com" },
+          { subject: "Netflix" },
+          { subject: "código" }
         ]
       });
 
       if (!messages || messages.length === 0) return null;
 
-      const sortedIds = [...messages].sort((a, b) => Number(b) - Number(a)).slice(0, 10);
+      const results: { code: string; date: Date }[] = [];
+      const limitedIds = [...messages].sort((a, b) => Number(b) - Number(a)).slice(0, 15);
       
-      for (const msgId of sortedIds) {
+      for (const msgId of limitedIds) {
         let message = await client.fetchOne(msgId, { source: true, envelope: true });
-        if (!message || !message.source) continue;
+        if (!message || !message.source || !message.envelope) continue;
 
         const msgDate = new Date(message.envelope.date);
         const diffMinutes = (Date.now() - msgDate.getTime()) / (1000 * 60);
-        if (diffMinutes > 60) continue; 
+        
+        if (diffMinutes > 15) continue; 
 
         let parsed = await simpleParser(message.source);
         const text = parsed.text || "";
-        const html = parsed.html || "";
-        const subject = parsed.subject || "";
-        const combined = (subject + " " + text + " " + html).toLowerCase();
+        const subject = (parsed.subject || "").toLowerCase();
+        const bodyContent = text.toLowerCase();
         
-        let codeMatch = combined.match(/\b\d{6}\b/);
-        if (!codeMatch) codeMatch = combined.match(/\b\d{4}\b/);
+        // Prioridade 1: Assunto diz que é um código
+        const isCodeEmail = subject.includes("código") || subject.includes("code") || subject.includes("acesso") || subject.includes("pin");
         
-        if (!codeMatch) {
-           const spaceMatch = combined.match(/\b\d{3}\s\d{3}\b/);
-           if (spaceMatch) return { code: spaceMatch[0].replace(/\s/g, '') };
+        // Tenta encontrar o código perto de palavras-chave no corpo da mensagem
+        // Netflix geralmente envia: "Seu código é 123456" ou "Your code is 123 456"
+        let code = null;
+        
+        // Regex para capturar números de 4 ou 6 dígitos que apareçam após palavras de "código"
+        const specificMatch = bodyContent.match(/(?:código|code|pin|acesso|entrar|seu código é|o código é|is)\s*(?::|—|-)?\s*(\d{6}|\d{3}\s\d{3}|\d{4})\b/i);
+        
+        if (specificMatch) {
+            code = specificMatch[1].replace(/\s/g, '');
+        } else {
+            // Se não achou com palavra-chave, tenta pegar o primeiro número de 6 dígitos que NÃO é um ano
+            const allSix = bodyContent.match(/\b\d{6}\b/g) || [];
+            for (const n of allSix) {
+                if (!["2024", "2025", "2026"].includes(n)) {
+                    code = n;
+                    break;
+                }
+            }
+            
+            // Se ainda não achou, tenta 4 dígitos (PIN)
+            if (!code) {
+                const allFour = bodyContent.match(/\b\d{4}\b/g) || [];
+                for (const n of allFour) {
+                    if (!["2024", "2025", "2026"].includes(n)) {
+                        code = n;
+                        break;
+                    }
+                }
+            }
         }
 
-        if (codeMatch) {
-           const result = codeMatch[0];
-           if (result !== "2024" && result !== "2025" && result !== "2026") return { code: result };
+        if (code) {
+            // Se o e-mail tem "código" no assunto, esse ganha pontuação máxima na decisão
+            const score = isCodeEmail ? 100 : 50;
+            results.push({ code, date: msgDate, score });
         }
       }
+
+      if (results.length > 0) {
+        // Ordena por Score (e-mail de código primeiro) e depois por Data (mais recente)
+        results.sort((a, b) => {
+            if (b.score !== a.score) return b.score - a.score;
+            return b.date.getTime() - a.date.getTime();
+        });
+        return { code: results[0].code, receivedAt: results[0].date.toISOString() };
+      }
+      
       return null;
     } finally {
       lock.release();
@@ -86,7 +126,11 @@ export default async function handler(req: any, res: any) {
     const result = await getLatestNetflixCode();
     
     if (result && typeof result === 'object' && 'code' in result) {
-      return res.status(200).json({ code: result.code, timestamp: new Date().toISOString() });
+      return res.status(200).json({ 
+        code: result.code, 
+        receivedAt: result.receivedAt,
+        now: new Date().toISOString() 
+      });
     } else if (result === "AUTH_ERROR") {
       return res.status(401).json({ error: "Erro de autenticação no Gmail." });
     } else if (result === "CONN_ERROR") {

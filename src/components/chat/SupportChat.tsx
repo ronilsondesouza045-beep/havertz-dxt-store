@@ -241,29 +241,35 @@ export function SupportChat() {
                
                if (codeRes.data && codeRes.data.code) {
                  toast.success("Código localizado!", { id: 'searching-code' });
-                 response = getNetflixResponse(codeRes.data.code);
+                 response = getNetflixResponse(codeRes.data.code, codeRes.data.receivedAt);
                } else {
                  throw new Error("Resposta inválida do servidor");
                }
             } catch (err: any) {
-               console.error("Chat API Error:", err);
                toast.dismiss('searching-code');
                
                if (axios.isAxiosError(err) && err.response) {
                  const status = err.response.status;
                  if (status === 404) {
-                   response = "❌ Nenhum código novo da Netflix foi encontrado nos últimos 60 minutos.\n\nCertifique-se de:\n1. Clicar em 'Enviar Código' na Netflix.\n2. Aguardar 10-15 segundos.\n3. Clicar novamente em 'BUSCAR CÓDIGO AGORA'.";
-                 } else if (status === 401) {
-                   response = "🔑 **Erro de Configuração:**\nO bot não conseguiu entrar no seu e-mail.\n\nVerifique se a 'Senha de App' no Vercel está correta e sem espaços.";
-                 } else if (status === 503 || status === 504) {
-                   response = "🌐 **Erro de Conexão/Timeout:**\nO servidor demorou muito para responder ou o Gmail bloqueou o acesso. Tente clicar novamente em alguns segundos.";
+                   // No logging for 404 as it's a valid "not found" state
+                   response = "❌ Nenhum código novo da Netflix foi encontrado nos últimos 15 minutos.\n\nCertifique-se de:\n1. Clicar em 'Enviar Código' na Netflix.\n2. Aguardar 10-15 segundos.\n3. Clicar novamente em 'BUSCAR CÓDIGO AGORA'.\n\n*Nota: Se o código demorar mais de 15 minutos, ele expira e você precisará gerar um novo.*";
                  } else {
-                   response = "⚠️ Ocorreu um erro técnico (" + status + "). Tente novamente.";
+                   console.error("Chat API Error:", err);
+                   if (status === 401) {
+                     response = "🔑 **Erro de Configuração:**\nO bot não conseguiu entrar no seu e-mail.\n\nVerifique se a 'Senha de App' no Vercel está correta e sem espaços.";
+                   } else if (status === 503 || status === 504) {
+                     response = "🌐 **Erro de Conexão/Timeout:**\nO servidor demorou muito para responder ou o Gmail bloqueou o acesso. Tente clicar novamente em alguns segundos.";
+                   } else {
+                     response = "⚠️ Ocorreu um erro técnico (" + status + "). Tente novamente.";
+                   }
                  }
-               } else if (err.code === 'ECONNABORTED') {
-                 response = "⏳ O servidor demorou muito para responder. Tente novamente em alguns instantes.";
                } else {
-                 response = "⚠️ Ocorreu um erro inesperado ao buscar o código. Tente novamente.";
+                 console.error("Chat Error:", err);
+                 if (err.code === 'ECONNABORTED') {
+                   response = "⏳ O servidor demorou muito para responder. Tente novamente em alguns instantes.";
+                 } else {
+                   response = "⚠️ Ocorreu um erro inesperado ao buscar o código. Tente novamente.";
+                 }
                }
             }
           } else {

@@ -14,7 +14,7 @@ export const NETFLIX_CONFIG = {
   instagramLink: 'https://www.instagram.com/ironi_ofc/'
 };
 
-export function getNetflixResponse(latestCode?: string | null) {
+export function getNetflixResponse(latestCode?: string | null, receivedAt?: string | null) {
   const now = new Date();
   const currentDay = now.getDate();
 
@@ -23,7 +23,20 @@ export function getNetflixResponse(latestCode?: string | null) {
   }
 
   if (latestCode) {
-    return `✅ CÓDIGO ENCONTRADO: ${latestCode}\n\nUse este código na tela da Netflix agora! 🚀`;
+    let timeInfo = '';
+    if (receivedAt) {
+       const receivedDate = new Date(receivedAt);
+       const diffSeconds = Math.floor((now.getTime() - receivedDate.getTime()) / 1000);
+       
+       if (diffSeconds < 60) {
+         timeInfo = ` (Recebido há ${diffSeconds} segundos)`;
+       } else {
+         const diffMinutes = Math.floor(diffSeconds / 60);
+         timeInfo = ` (Recebido há ${diffMinutes} minuto${diffMinutes > 1 ? 's' : ''})`;
+       }
+    }
+
+    return `✅ **CÓDIGO LOCALIZADO!**${timeInfo}\n\n🔑 Seu código é: **${latestCode}**\n\n📌 *Dica: Use rápido na Netflix antes que expire!* 🚀`;
   }
 
   return `🎬 Netflix gratuita disponível!\n\n📧 E-mail: ${NETFLIX_CONFIG.email}\n🔑 Senha: ${NETFLIX_CONFIG.password}\n\n📖 INSTRUÇÕES:\n1. Tente logar com os dados acima.\n2. Se pedir código de acesso, clique em "Enviar Código" na Netflix.\n3. Após clicar lá, volte aqui e selecione: "🔍 BUSCAR CÓDIGO AGORA".\n\n⚠️ Disponível até o dia ${NETFLIX_CONFIG.expireDay}.`;

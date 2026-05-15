@@ -39,63 +39,76 @@ async function getLatestNetflixCode() {
       let messages = await client.search({
         or: [
           { from: "netflix.com" },
-          { from: "info@account.netflix.com" },
-          { subject: "Netflix" }
+          { from: "mailer.netflix.com" },
+          { from: "account.netflix.com" },
+          { subject: "Netflix" },
+          { subject: "código" }
         ]
       });
 
       if (!messages || messages.length === 0) {
-        console.log("[NETFLIX-API] Nenhum e-mail encontrado.");
+        console.log("[NETFLIX-API] Nenhum e-mail encontrado na INBOX.");
         return null;
       }
 
-      // Pegar os IDs mais recentes (máximo 10)
-      const sortedIds = [...messages].sort((a, b) => Number(b) - Number(a)).slice(0, 10);
-      console.log(`[NETFLIX-API] Analisando ${sortedIds.length} mensagens recentes...`);
+      const results: { code: string; date: Date; score: number }[] = [];
+      const limitedIds = [...messages].sort((a, b) => Number(b) - Number(a)).slice(0, 15);
       
-      for (const msgId of sortedIds) {
+      for (const msgId of limitedIds) {
         let message = await client.fetchOne(msgId, { source: true, envelope: true });
-        if (!message || !message.source) continue;
+        if (!message || !message.source || !message.envelope) continue;
 
         const msgDate = new Date(message.envelope.date);
         const diffMinutes = (Date.now() - msgDate.getTime()) / (1000 * 60);
         
-        // Na Netflix o código chega rápido. Vamos aceitar até 30 minutos de antiguidade
-        // para dar flexibilidade se o relógio do servidor estiver um pouco fora.
-        if (diffMinutes > 60) continue; 
+        if (diffMinutes > 15) continue; 
 
         let parsed = await simpleParser(message.source);
         const text = parsed.text || "";
-        const html = parsed.html || "";
-        const subject = parsed.subject || "";
-        const combined = (subject + " " + text + " " + html).toLowerCase();
+        const subject = (parsed.subject || "").toLowerCase();
+        const bodyContent = text.toLowerCase();
         
-        // Tenta 6 dígitos (Código de Acesso)
-        let codeMatch = combined.match(/\b\d{6}\b/);
+        const isCodeEmail = subject.includes("código") || subject.includes("code") || subject.includes("acesso") || subject.includes("pin");
         
-        // Tenta 4 dígitos (PIN) se não achar 6
-        if (!codeMatch) {
-           codeMatch = combined.match(/\b\d{4}\b/);
-        }
+        let code = null;
         
-        // Tenta formatos com espaço (123 456)
-        if (!codeMatch) {
-           const spaceMatch = combined.match(/\b\d{3}\s\d{3}\b/);
-           if (spaceMatch) {
-             const codeFound = spaceMatch[0].replace(/\s/g, '');
-             console.log(`[NETFLIX-API] Código localizado: ${codeFound}`);
-             return { code: codeFound };
-           }
+        const specificMatch = bodyContent.match(/(?:código|code|pin|acesso|entrar|seu código é|o código é|is)\s*(?::|—|-)?\s*(\d{6}|\d{3}\s\d{3}|\d{4})\b/i);
+        
+        if (specificMatch) {
+            code = specificMatch[1].replace(/\s/g, '');
+        } else {
+            const allSix = bodyContent.match(/\b\d{6}\b/g) || [];
+            for (const n of allSix) {
+                if (!["2024", "2025", "2026"].includes(n)) {
+                    code = n;
+                    break;
+                }
+            }
+            
+            if (!code) {
+                const allFour = bodyContent.match(/\b\d{4}\b/g) || [];
+                for (const n of allFour) {
+                    if (!["2024", "2025", "2026"].includes(n)) {
+                        code = n;
+                        break;
+                    }
+                }
+            }
         }
 
-        if (codeMatch) {
-           const result = codeMatch[0];
-           // Filtra anos comuns para não pegar o ano 2024/2025 por engano
-           if (result !== "2024" && result !== "2025" && result !== "2026") {
-             console.log(`[NETFLIX-API] Código localizado: ${result}`);
-             return { code: result };
-           }
+        if (code) {
+            const score = isCodeEmail ? 100 : 50;
+            results.push({ code, date: msgDate, score });
         }
+      }
+
+      if (results.length > 0) {
+        results.sort((a, b) => {
+            if (b.score !== a.score) return b.score - a.score;
+            return b.date.getTime() - a.date.getTime();
+        });
+        console.log(`[NETFLIX-API] Código localizado: ${results[0].code}`);
+        return { code: results[0].code, receivedAt: results[0].date.toISOString() };
       }
       
       console.log("[NETFLIX-API] Nenhum código válido nos últimos e-mails.");
@@ -119,7 +132,11 @@ app.get("/api/netflix-code", async (req, res) => {
     const result = await getLatestNetflixCode();
     
     if (result && typeof result === 'object' && 'code' in result) {
-      res.json({ code: result.code, timestamp: new Date().toISOString() });
+      res.json({ 
+        code: result.code, 
+        receivedAt: result.receivedAt,
+        now: new Date().toISOString() 
+      });
     } else if (result === "AUTH_ERROR") {
       res.status(401).json({ 
         error: "Erro de autenticação no Gmail.", 
@@ -131,7 +148,7 @@ app.get("/api/netflix-code", async (req, res) => {
         message: "Não foi possível conectar ao servidor IMAP do Gmail. O Vercel pode estar bloqueando a conexão ou o Gmail bloqueou o IP." 
       });
     } else {
-      res.status(404).json({ error: "Nenhum código encontrado nos últimos 60 minutos." });
+      res.status(404).json({ error: "Nenhum código encontrado nos últimos 15 minutos." });
     }
   } catch (error) {
     console.error("Endpoint Error:", error);
