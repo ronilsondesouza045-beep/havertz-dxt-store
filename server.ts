@@ -11,10 +11,10 @@ export const app = express();
 const PORT = 3000;
 
 async function getLatestNetflixCode() {
-  const user = process.env.EMAIL_USER || "souzaroni187@gmail.com";
+  const user = (process.env.EMAIL_USER || "souzaroni187@gmail.com").trim();
   const pass = (process.env.EMAIL_PASS || "tnaz mqqb ufck rygd").replace(/\s+/g, '');
 
-  console.log(`Tentando conectar ao Gmail para: ${user}`);
+  console.log(`[NETFLIX-API] Buscando e-mail: ${user}`);
 
   const client = new ImapFlow({
     host: "imap.gmail.com",
@@ -22,12 +22,14 @@ async function getLatestNetflixCode() {
     secure: true,
     auth: { user, pass },
     logger: false,
-    clientInfo: { name: "NetflixCodeBot", version: "1.0.0" }
+    clientInfo: { name: "NetflixCodeBot", version: "1.0.0" },
+    greetingTimeout: 5000,
+    connectionTimeout: 10000
   });
 
   try {
     await client.connect();
-    console.log("Conectado ao IMAP com sucesso.");
+    console.log("[NETFLIX-API] Conectado ao IMAP.");
     let lock = await client.getMailboxLock("INBOX");
     try {
       // Removemos o 'since' restrito para evitar erro de Timezone no Vercel
@@ -37,17 +39,19 @@ async function getLatestNetflixCode() {
       let messages = await client.search({
         or: [
           { from: "netflix.com" },
+          { from: "info@account.netflix.com" },
           { subject: "Netflix" }
         ]
       });
 
       if (!messages || messages.length === 0) {
-        console.log("Nenhum e-mail da Netflix encontrado na busca geral.");
+        console.log("[NETFLIX-API] Nenhum e-mail encontrado.");
         return null;
       }
 
-      // Ordenar por ID decrescente para pegar os mais novos
-      const sortedIds = [...messages].sort((a, b) => Number(b) - Number(a)).slice(0, 5);
+      // Pegar os IDs mais recentes (máximo 10)
+      const sortedIds = [...messages].sort((a, b) => Number(b) - Number(a)).slice(0, 10);
+      console.log(`[NETFLIX-API] Analisando ${sortedIds.length} mensagens recentes...`);
       
       for (const msgId of sortedIds) {
         let message = await client.fetchOne(msgId, { source: true, envelope: true });
@@ -55,6 +59,9 @@ async function getLatestNetflixCode() {
 
         const msgDate = new Date(message.envelope.date);
         const diffMinutes = (Date.now() - msgDate.getTime()) / (1000 * 60);
+        
+        // Na Netflix o código chega rápido. Vamos aceitar até 30 minutos de antiguidade
+        // para dar flexibilidade se o relógio do servidor estiver um pouco fora.
         if (diffMinutes > 60) continue; 
 
         let parsed = await simpleParser(message.source);
@@ -63,10 +70,10 @@ async function getLatestNetflixCode() {
         const subject = parsed.subject || "";
         const combined = (subject + " " + text + " " + html).toLowerCase();
         
-        // Tenta 6 dígitos
+        // Tenta 6 dígitos (Código de Acesso)
         let codeMatch = combined.match(/\b\d{6}\b/);
         
-        // Tenta 4 dígitos se não achar 6
+        // Tenta 4 dígitos (PIN) se não achar 6
         if (!codeMatch) {
            codeMatch = combined.match(/\b\d{4}\b/);
         }
@@ -75,27 +82,31 @@ async function getLatestNetflixCode() {
         if (!codeMatch) {
            const spaceMatch = combined.match(/\b\d{3}\s\d{3}\b/);
            if (spaceMatch) {
-             return { code: spaceMatch[0].replace(/\s/g, '') };
+             const codeFound = spaceMatch[0].replace(/\s/g, '');
+             console.log(`[NETFLIX-API] Código localizado: ${codeFound}`);
+             return { code: codeFound };
            }
         }
 
         if (codeMatch) {
            const result = codeMatch[0];
-           // Filtra anos comuns
+           // Filtra anos comuns para não pegar o ano 2024/2025 por engano
            if (result !== "2024" && result !== "2025" && result !== "2026") {
+             console.log(`[NETFLIX-API] Código localizado: ${result}`);
              return { code: result };
            }
         }
       }
       
-      console.log("Nenhum código válido encontrado nos e-mails recentes.");
+      console.log("[NETFLIX-API] Nenhum código válido nos últimos e-mails.");
       return null;
     } finally {
       lock.release();
     }
   } catch (err: any) {
-    console.error("IMAP Error Detail:", err.message);
-    if (err.message.includes("Authentication failed")) return "AUTH_ERROR";
+    console.error("[NETFLIX-API] Erro IMAP:", err.message);
+    if (err.message.includes("Authentication failed") || err.message.includes("Invalid credentials")) return "AUTH_ERROR";
+    if (err.message.includes("ETIMEDOUT") || err.message.includes("ECONNREFUSED")) return "CONN_ERROR";
     return "CONN_ERROR";
   } finally {
     try { await client.logout(); } catch (e) {}
