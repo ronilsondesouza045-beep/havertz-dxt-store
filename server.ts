@@ -16,7 +16,7 @@ async function getLatestNetflixCode() {
     port: 993,
     secure: true,
     auth: {
-      user: process.env.EMAIL_USER || "ronilsondesouza045@gmail.com",
+      user: process.env.EMAIL_USER || "souzaroni187@gmail.com",
       pass: (process.env.EMAIL_PASS || "tnaz mqqb ufck rygd").replace(/\s+/g, ''),
     },
     logger: false,
