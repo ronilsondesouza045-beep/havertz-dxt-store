@@ -27,7 +27,7 @@ import { handleFirestoreError, OperationType } from '../../lib/firestoreErrors';
 import { safeDate } from '../../lib/utils';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { BOT_OPTIONS, BOT_MESSAGES, BotOption, NETFLIX_CONFIG, getNetflixResponse } from '../../lib/botLogic';
+import { BOT_OPTIONS, BOT_MESSAGES, BotOption, NETFLIX_CONFIG, getNetflixResponse, getPrimeVideoResponse } from '../../lib/botLogic';
 
 interface Message {
   id: string;
@@ -229,6 +229,8 @@ export function SupportChat() {
         if (option) {
           if (option.id === 'netflix_free') {
             response = getNetflixResponse(null);
+          } else if (option.id === 'prime_video_free') {
+            response = getPrimeVideoResponse();
           } else if (option.id === 'check_netflix_code') {
             // Show a temporary message to let the user know we are working
             toast.loading("Buscando código no Gmail...", { id: 'searching-code' });
@@ -503,7 +505,7 @@ export function SupportChat() {
                       <div className="flex flex-col gap-3 pt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="flex items-center justify-between px-1">
                           <p className="text-[10px] text-zinc-600 font-black uppercase tracking-[0.3em]">Menu de Ajuda</p>
-                          {NETFLIX_CONFIG.active && new Date().getDate() <= NETFLIX_CONFIG.expireDay && (
+                          {new Date().getDate() <= NETFLIX_CONFIG.expireDay && (
                              <Badge variant="neon" className="text-[7px] animate-pulse">NOVO</Badge>
                           )}
                         </div>

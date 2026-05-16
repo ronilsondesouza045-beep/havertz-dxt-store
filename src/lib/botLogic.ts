@@ -14,6 +14,18 @@ export const NETFLIX_CONFIG = {
   instagramLink: 'https://www.instagram.com/ironi_ofc/'
 };
 
+export const PRIME_VIDEO_CONFIG = {
+  email: 'gatomemu22@gmail.com',
+  password: 'ronichave123',
+  expireDate: '16/06/2026',
+  tvLink: 'https://www.primevideo.com/ontv/code/ref=atv_device_code?ie=UTF8',
+  mobileLink: 'https://play.google.com/store/apps/details?id=com.amazon.avod.thirdpartyclient'
+};
+
+export function getPrimeVideoResponse() {
+  return `🎬 Amazon Prime Video Gratuito! (Ilimitado)\n\n📧 E-mail: ${PRIME_VIDEO_CONFIG.email}\n🔑 Senha: ${PRIME_VIDEO_CONFIG.password}\n\n📖 Instruções:\nLogin liberado até ${PRIME_VIDEO_CONFIG.expireDate}.\nAviso: Se for usar no PC, poderá ser solicitado o código da televisão.\n\n🔗 Links Diretos:\n📺 [Configurar na TV](${PRIME_VIDEO_CONFIG.tvLink})\n📱 [Baixar para Celular](${PRIME_VIDEO_CONFIG.mobileLink})`;
+}
+
 export function getNetflixResponse(latestCode?: string | null, receivedAt?: string | null) {
   const now = new Date();
   const currentDay = now.getDate();
@@ -48,6 +60,12 @@ export const BOT_OPTIONS: BotOption[] = [
     label: '🎬 Netflix gratuita',
     responses: [],
     keywords: ['netflix', 'gratis', 'gratuita', 'codigo', 'senha', 'conta']
+  },
+  {
+    id: 'prime_video_free',
+    label: '🎬 Prime Video gratuito',
+    responses: [],
+    keywords: ['prime', 'video', 'amazon', 'amazon prime', 'prime video']
   },
   {
     id: 'check_netflix_code',
