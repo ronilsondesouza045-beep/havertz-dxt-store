@@ -8,6 +8,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export const app = express();
+app.use(express.json());
 const PORT = 3000;
 
 async function getLatestNetflixCode() {
@@ -126,7 +127,6 @@ async function getLatestNetflixCode() {
   }
 }
 
-// API routes FIRST
 app.get("/api/netflix-code", async (req, res) => {
   try {
     const result = await getLatestNetflixCode();
@@ -156,20 +156,27 @@ app.get("/api/netflix-code", async (req, res) => {
   }
 });
 
-// Handling for development (AI Studio)
-if (process.env.NODE_ENV !== "production") {
-  async function setupVite() {
+async function startServer() {
+  // Handling for development (AI Studio)
+  if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
-    
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`Server running on http://localhost:${PORT}`);
+  } else {
+    const distPath = path.join(process.cwd(), 'dist');
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
     });
   }
-  setupVite();
+
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
 }
+
+startServer();
 
 export default app;

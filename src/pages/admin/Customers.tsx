@@ -44,7 +44,7 @@ export default function AdminCustomers() {
     return (
       (c.name || '').toLowerCase().includes(term) ||
       (c.email || '').toLowerCase().includes(term) ||
-      (c.uid || '').toLowerCase().includes(term)
+      (c.id || '').toLowerCase().includes(term)
     );
   });
 
@@ -92,7 +92,7 @@ export default function AdminCustomers() {
                   </tr>
                 ) : (
                   filteredCustomers.map((customer) => (
-                    <tr key={customer.uid} className="hover:bg-white/[0.02] transition-colors">
+                    <tr key={customer.id} className="hover:bg-white/[0.02] transition-colors">
                       <td className="px-6 py-6">
                         <div className="flex items-center gap-3">
                           <div className="h-10 w-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 overflow-hidden shrink-0">
@@ -110,7 +110,7 @@ export default function AdminCustomers() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-6 font-mono text-[10px] text-zinc-500">{customer.uid}</td>
+                      <td className="px-6 py-6 font-mono text-[10px] text-zinc-500">{customer.id}</td>
                       <td className="px-6 py-6">
                         <div className="flex items-center gap-2 text-zinc-400 text-xs italic">
                           <Calendar size={14} className="text-zinc-600" />

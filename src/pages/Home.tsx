@@ -99,6 +99,48 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Free Tools Section */}
+      <section className="py-20 px-4 bg-zinc-950/50 border-y border-zinc-900 relative">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-neon-green/5 blur-[100px] pointer-events-none" />
+        <div className="container mx-auto">
+          <div className="mb-12 text-center md:text-left">
+            <Badge variant="neon" className="mb-4">NOVIDADE</Badge>
+            <h2 className="text-4xl md:text-6xl font-black text-white uppercase italic tracking-tighter mb-4">Laboratório <span className="text-neon-green">Gratuito</span></h2>
+            <p className="text-zinc-500 italic max-w-2xl">Ferramentas exclusivas e acessos liberados para a comunidade Havertz.dxt.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <Card className="bg-zinc-900/20 border-zinc-900 p-8 flex flex-col items-start gap-6 group hover:border-neon-purple/30 transition-all">
+              <div className="h-14 w-14 rounded-2xl bg-neon-purple/10 border border-neon-purple/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Zap className="text-neon-purple h-8 w-8" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-black text-white italic uppercase mb-2">STREAMING <span className="text-neon-purple">INFO</span></h3>
+                <p className="text-zinc-500 text-sm italic mb-6">Acompanhe as contas públicas de Netflix e Prime Video direto pelo nosso bot de suporte.</p>
+                <Button 
+                  variant="neon-purple" 
+                  size="sm" 
+                  className="w-full uppercase italic font-black"
+                  onClick={() => {
+                    const chatBtn = document.querySelector('[aria-label="Abrir chat de suporte"]') as HTMLButtonElement;
+                    if (chatBtn) chatBtn.click();
+                  }}
+                >
+                  ABRIR SUPORTE 💬
+                </Button>
+              </div>
+            </Card>
+
+            <Card className="bg-zinc-900/20 border-zinc-900 p-8 flex flex-col items-center justify-center gap-6 border-dashed opacity-50">
+              <div className="h-14 w-14 rounded-2xl bg-zinc-800 border border-zinc-700 flex items-center justify-center">
+                <CheckCircle2 className="text-zinc-600 h-8 w-8" />
+              </div>
+              <p className="text-zinc-600 font-black italic uppercase tracking-widest text-center">MAIS FERRAMENTAS EM BREVE</p>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* Unified Notice and Benefits Section */}
       <div className="container mx-auto px-4">
         <NoticeSection title="Protocolos Elite Havertz.dxt" />

@@ -231,8 +231,8 @@ export default function AdminOrders() {
                       <td className="px-6 py-6">
                         <div className="flex items-center gap-3">
                           <div className="h-8 w-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 overflow-hidden shrink-0">
-                            {order.customer_avatar ? (
-                              <img src={order.customer_avatar} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                            {(order as any).customer_avatar ? (
+                              <img src={(order as any).customer_avatar} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                             ) : (
                               <User size={14} />
                             )}
@@ -358,8 +358,8 @@ export default function AdminOrders() {
                     <div className="grid grid-cols-1 gap-4">
                       <div className="p-4 bg-zinc-900/30 border border-zinc-800 rounded-2xl flex items-center gap-4">
                         <div className="h-10 w-10 bg-zinc-800 rounded-xl flex items-center justify-center text-neon-green overflow-hidden">
-                          {selectedOrder.customer_avatar ? (
-                            <img src={selectedOrder.customer_avatar} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                          {(selectedOrder as any).customer_avatar ? (
+                            <img src={(selectedOrder as any).customer_avatar} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                           ) : (
                             <User size={20} />
                           )}

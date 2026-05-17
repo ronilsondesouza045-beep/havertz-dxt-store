@@ -478,7 +478,7 @@ export default function AdminSupportChat() {
                                   {msg.file_name && <span className="text-[8px] text-zinc-600 truncate max-w-full px-2 italic">{msg.file_name}</span>}
                                   <Button 
                                     variant="outline" 
-                                    size="xs" 
+                                    size="sm" 
                                     className="mt-2 h-7 text-[8px] border-zinc-700"
                                     onClick={() => window.open(msg.image_url, '_blank')}
                                   >

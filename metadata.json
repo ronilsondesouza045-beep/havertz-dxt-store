@@ -1,6 +1,6 @@
 {
   "name": "HAVERTZ.DXT — IMVU CRÉDITOS",
-  "description": "Premium system for manual IMVU credit sales with neon gamer aesthetic and admin dashboard.",
+  "description": "Premium system for manual IMVU credit sales with neon gamer aesthetic, admin dashboard, and HavertzAI free assistant.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

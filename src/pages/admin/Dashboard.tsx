@@ -277,8 +277,8 @@ export default function AdminDashboard() {
                     <div className="flex justify-between items-center py-2 border-y border-zinc-900">
                        <div className="flex items-center gap-3">
                           <div className="h-10 w-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 overflow-hidden shrink-0">
-                            {order.customer_avatar ? (
-                              <img src={order.customer_avatar} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                            {(order as any).customer_avatar ? (
+                              <img src={(order as any).customer_avatar} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                             ) : (
                               <User className="h-5 w-5" />
                             )}
@@ -340,8 +340,8 @@ export default function AdminDashboard() {
                              <td className="px-6 py-5">
                                 <div className="flex items-center gap-3">
                                    <div className="h-9 w-9 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 overflow-hidden shrink-0">
-                                     {order.customer_avatar ? (
-                                       <img src={order.customer_avatar} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                                     {(order as any).customer_avatar ? (
+                                       <img src={(order as any).customer_avatar} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                                      ) : (
                                        <User size={16} className="h-4 w-4" />
                                      )}

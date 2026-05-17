@@ -37,7 +37,7 @@ async function getLatestNetflixCode() {
 
       if (!messages || messages.length === 0) return null;
 
-      const results: { code: string; date: Date }[] = [];
+      const results: { code: string; date: Date; score: number }[] = [];
       const limitedIds = [...messages].sort((a, b) => Number(b) - Number(a)).slice(0, 15);
       
       for (const msgId of limitedIds) {

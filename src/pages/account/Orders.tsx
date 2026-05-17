@@ -293,10 +293,10 @@ export default function UserOrders() {
           </div>
           <div className="flex flex-col gap-3 pt-4">
              <Button 
-               variant="error" 
-               className="w-full font-black italic uppercase"
+               variant="secondary" 
+               className="w-full font-black italic uppercase bg-red-400/10 text-red-400 border border-red-400/20 hover:bg-red-400/20"
                onClick={handleDeleteOrder}
-               loading={isDeleting}
+               isLoading={isDeleting}
              >
                 Sim, excluir permanentemente
              </Button>
