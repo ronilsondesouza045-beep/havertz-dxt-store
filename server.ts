@@ -5,7 +5,41 @@ import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 import dotenv from "dotenv";
 
+import admin from "firebase-admin";
+import fs from "fs";
+
 dotenv.config();
+
+// Load firebase config to get the correct projectId
+let firebaseConfig: any = {};
+try {
+  const configPath = path.resolve(process.cwd(), "firebase-applet-config.json");
+  if (fs.existsSync(configPath)) {
+    firebaseConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+  }
+} catch (e) {
+  console.error("Failed to load firebase-applet-config.json:", e);
+}
+
+// Lazy Load Firebase Admin
+let _adminAuth: admin.auth.Auth | null = null;
+function getAdminAuth() {
+  if (!_adminAuth) {
+    const projectId = firebaseConfig.projectId || process.env.FIREBASE_PROJECT_ID || "gen-lang-client-0875766870";
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        projectId: projectId,
+      });
+    }
+    _adminAuth = admin.auth();
+  }
+  return _adminAuth;
+}
+
+// Map to store last request timestamp per IP and User
+const userCooldowns = new Map<string, number>();
+const ipCooldowns = new Map<string, number>();
+const COOLDOWN_TIME = 15 * 60 * 1000; // 15 minutes cooldown
 
 export const app = express();
 app.use(express.json());
@@ -129,9 +163,48 @@ async function getLatestNetflixCode() {
 
 app.get("/api/netflix-code", async (req, res) => {
   try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Identidade não confirmada.", message: "Você precisa estar logado para acessar o suporte Netflix." });
+    }
+
+    const idToken = authHeader.split("Bearer ")[1];
+    let decodedToken;
+    try {
+      decodedToken = await getAdminAuth().verifyIdToken(idToken);
+    } catch (e) {
+      return res.status(401).json({ error: "Sessão expirada.", message: "Sua sessão expirou, faça login novamente." });
+    }
+
+    // Rate limiting: Strict check for both User UID and IP Address
+    const userId = decodedToken.uid;
+    const userIp = req.ip || "unknown-ip";
+    const now = Date.now();
+    
+    const lastUserRequest = userCooldowns.get(userId) || 0;
+    const lastIpRequest = ipCooldowns.get(userIp) || 0;
+
+    const userTimeLeft = COOLDOWN_TIME - (now - lastUserRequest);
+    const ipTimeLeft = COOLDOWN_TIME - (now - lastIpRequest);
+
+    if (userTimeLeft > 0 || ipTimeLeft > 0) {
+      const remainingSeconds = Math.ceil(Math.max(userTimeLeft, ipTimeLeft) / 1000);
+      const minutes = Math.floor(remainingSeconds / 60);
+      const seconds = remainingSeconds % 60;
+      
+      return res.status(429).json({ 
+        error: "Aguarde a Renovação.", 
+        message: `Para evitar sobrecarga na conta, você só pode gerar um código a cada 15 minutos. Aguarde ${minutes > 0 ? `${minutes}m ` : ""}${seconds}s.` 
+      });
+    }
+
     const result = await getLatestNetflixCode();
     
     if (result && typeof result === 'object' && 'code' in result) {
+      // Update cooldowns on success
+      userCooldowns.set(userId, now);
+      ipCooldowns.set(userIp, now);
+
       res.json({ 
         code: result.code, 
         receivedAt: result.receivedAt,

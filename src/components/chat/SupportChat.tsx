@@ -233,46 +233,57 @@ export function SupportChat() {
             response = getPrimeVideoResponse();
           } else if (option.id === 'check_netflix_code') {
             // Show a temporary message to let the user know we are working
-            toast.loading("Buscando código no Gmail...", { id: 'searching-code' });
-            
-            try {
-               const codeRes = await axios.get('/api/netflix-code', { 
-                 timeout: 25000,
-                 headers: { 'Accept': 'application/json' }
-               });
-               
-               if (codeRes.data && codeRes.data.code) {
-                 toast.success("Código localizado!", { id: 'searching-code' });
-                 response = getNetflixResponse(codeRes.data.code, codeRes.data.receivedAt);
-               } else {
-                 throw new Error("Resposta inválida do servidor");
-               }
-            } catch (err: any) {
-               toast.dismiss('searching-code');
-               
-               if (axios.isAxiosError(err) && err.response) {
-                 const status = err.response.status;
-                 if (status === 404) {
-                   // No logging for 404 as it's a valid "not found" state
-                   response = "❌ Nenhum código novo da Netflix foi encontrado nos últimos 15 minutos.\n\nCertifique-se de:\n1. Clicar em 'Enviar Código' na Netflix.\n2. Aguardar 10-15 segundos.\n3. Clicar novamente em 'BUSCAR CÓDIGO AGORA'.\n\n*Nota: Se o código demorar mais de 15 minutos, ele expira e você precisará gerar um novo.*";
+            if (!user) {
+              response = "🔒 **Acesso Restrito:**\nPara evitar abusos no sistema de códigos, você precisa entrar na sua conta Havertz.dxt para buscar o código da Netflix.\n\n[Clique aqui para fazer login](/login)";
+            } else {
+              toast.loading("Buscando código no Gmail...", { id: 'searching-code' });
+              
+              try {
+                 const idToken = await auth.currentUser?.getIdToken();
+                 const codeRes = await axios.get('/api/netflix-code', { 
+                   timeout: 25000,
+                   headers: { 
+                     'Accept': 'application/json',
+                     'Authorization': idToken ? `Bearer ${idToken}` : ''
+                   }
+                 });
+                 
+                 if (codeRes.data && codeRes.data.code) {
+                   toast.success("Código localizado!", { id: 'searching-code' });
+                   response = getNetflixResponse(codeRes.data.code, codeRes.data.receivedAt);
                  } else {
-                   console.error("Chat API Error:", err);
-                   if (status === 401) {
-                     response = "🔑 **Erro de Configuração:**\nO bot não conseguiu entrar no seu e-mail.\n\nVerifique se a 'Senha de App' no Vercel está correta e sem espaços.";
-                   } else if (status === 503 || status === 504) {
-                     response = "🌐 **Erro de Conexão/Timeout:**\nO servidor demorou muito para responder ou o Gmail bloqueou o acesso. Tente clicar novamente em alguns segundos.";
+                   throw new Error("Resposta inválida do servidor");
+                 }
+              } catch (err: any) {
+                 toast.dismiss('searching-code');
+                 
+                 if (axios.isAxiosError(err) && err.response) {
+                   const status = err.response.status;
+                   const errorData = err.response.data;
+                   
+                   if (status === 404) {
+                     response = "❌ Nenhum código novo da Netflix foi encontrado nos últimos 15 minutos.\n\nCertifique-se de:\n1. Clicar em 'Enviar Código' na Netflix.\n2. Aguardar 10-15 segundos.\n3. Clicar novamente em 'BUSCAR CÓDIGO AGORA'.";
+                   } else if (status === 429) {
+                      response = `⏱️ **Cooldown Ativado:**\n${errorData.message || "Aguarde alguns instantes para tentar novamente."}`;
+                   } else if (status === 401) {
+                      response = `🔒 **Login Obrigatório:**\n${errorData.message || "Você precisa estar logado para acessar recursos avançados do suporte."}`;
                    } else {
-                     response = "⚠️ Ocorreu um erro técnico (" + status + "). Tente novamente.";
+                     console.error("Chat API Error:", err);
+                     if (status === 503 || status === 504) {
+                       response = "🌐 **Erro de Conexão/Timeout:**\nO servidor demorou muito para responder. Tente novamente em 20 segundos.";
+                     } else {
+                       response = `⚠️ Ocorreu um erro técnico (${status}). Tente novamente.`;
+                     }
+                   }
+                 } else {
+                   console.error("Chat Error:", err);
+                   if (err.code === 'ECONNABORTED') {
+                     response = "⏳ O servidor demorou muito para responder. Tente novamente em alguns instantes.";
+                   } else {
+                     response = "⚠️ Ocorreu um erro inesperado ao buscar o código. Tente novamente.";
                    }
                  }
-               } else {
-                 console.error("Chat Error:", err);
-                 if (err.code === 'ECONNABORTED') {
-                   response = "⏳ O servidor demorou muito para responder. Tente novamente em alguns instantes.";
-                 } else {
-                   response = "⚠️ Ocorreu um erro inesperado ao buscar o código. Tente novamente.";
-                 }
-               }
+              }
             }
           } else {
             // Pick a random variation
