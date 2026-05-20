@@ -172,7 +172,7 @@ export default function OrderDetails() {
                             <div className="p-8 rounded-3xl bg-zinc-950 border border-zinc-900 border-dashed text-center space-y-4">
                                <p className="text-xs text-zinc-400 italic font-bold">Aguardando confirmação manual.</p>
                                <div className="flex flex-col gap-2">
-                                 <Button variant="neon" size="sm" className="bg-[#E1306C] hover:bg-[#C13584] border-none text-[9px]" onClick={() => window.open('https://www.instagram.com/havertz.dxt/', '_blank')}>Enviar no Instagram</Button>
+                                 <Button variant="neon" size="sm" className="bg-[#E1306C] hover:bg-[#C13584] border-none text-[9px]" onClick={() => window.open('https://www.instagram.com/havertz.offc/', '_blank')}>Enviar no Instagram</Button>
                                </div>
                             </div>
                           )}

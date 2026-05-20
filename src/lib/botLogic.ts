@@ -10,8 +10,8 @@ export const NETFLIX_CONFIG = {
   expireDay: 30,
   email: 'souzaroni187@gmail.com',
   password: 'ronichave123',
-  instagram: '@ironi_ofc',
-  instagramLink: 'https://www.instagram.com/ironi_ofc/'
+  instagram: '@havertz.offc',
+  instagramLink: 'https://www.instagram.com/havertz.offc/'
 };
 
 export const PRIME_VIDEO_CONFIG = {
@@ -31,7 +31,7 @@ export function getNetflixResponse(latestCode?: string | null, receivedAt?: stri
   const currentDay = now.getDate();
 
   if (currentDay > NETFLIX_CONFIG.expireDay) {
-    return '🎬 A Netflix gratuita do momento já expirou. Aguarde uma nova liberação ou entre em contato pelo Instagram @ironi_ofc.';
+    return '🎬 A Netflix gratuita do momento já expirou. Aguarde uma nova liberação ou entre em contato pelo Instagram @havertz.offc.';
   }
 
   if (latestCode) {
@@ -77,9 +77,9 @@ export const BOT_OPTIONS: BotOption[] = [
     id: 'how_to_buy',
     label: 'Como comprar?',
     responses: [
-      'Escolha o catálogo, preencha os dados corretamente, crie o pedido, faça o Pix e envie o comprovante no Instagram oficial @havertz.dxt.',
-      'O processo é simples: escolha o catálogo, preencha seus dados, gere o pedido e mande o comprovante no insta @havertz.dxt.',
-      'Boa! Selecione seu produto no catálogo, preencha os dados e finalize o pedido. Depois envie o comprovante no Instagram @havertz.dxt.'
+      'Escolha o catálogo, preencha os dados corretamente, crie o pedido, faça o Pix e envie o comprovante no Instagram oficial @havertz.offc.',
+      'O processo é simples: escolha o catálogo, preencha seus dados, gere o pedido e mande o comprovante no insta @havertz.offc.',
+      'Boa! Selecione seu produto no catálogo, preencha os dados e finalize o pedido. Depois envie o comprovante no Instagram @havertz.offc.'
     ],
     keywords: ['comprar', 'como comprar', 'adquirir', 'pedido', 'compra']
   },
@@ -97,9 +97,9 @@ export const BOT_OPTIONS: BotOption[] = [
     id: 'receipt',
     label: 'Comprovante',
     responses: [
-      'Envie o comprovante no Instagram @havertz.dxt com o número do pedido. Isso agiliza muito o atendimento!',
-      'Mande o print do comprovante lá no Direct do @havertz.dxt informando o código da compra.',
-      'O comprovante deve ser enviado no nosso Instagram oficial @havertz.dxt junto com o ID do pedido.'
+      'Envie o comprovante no Instagram @havertz.offc com o número do pedido. Isso agiliza muito o atendimento!',
+      'Mande o print do comprovante lá no Direct do @havertz.offc informando o código da compra.',
+      'O comprovante deve ser enviado no nosso Instagram oficial @havertz.offc junto com o ID do pedido.'
     ],
     keywords: ['comprovante', 'enviar print', 'mandei o pix', 'print', 'comprovar', 'mandei']
   },

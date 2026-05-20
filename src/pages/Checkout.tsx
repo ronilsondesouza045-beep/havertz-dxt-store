@@ -224,7 +224,7 @@ ${details.length > 0 ? `**Dados informados:**\n${details.join('\n')}` : ''}
 
 Agora envie o comprovante do Pix pelo Instagram oficial informando o número do pedido.
 
-Instagram: @havertz.dxt`;
+Instagram: @havertz.offc`;
 
           await addDoc(collection(db, `support_conversations/${conversationId}/messages`), {
             conversation_id: conversationId,
@@ -325,7 +325,7 @@ Instagram: @havertz.dxt`;
                 <div className="mt-10 flex flex-col md:flex-row gap-4">
                   <Button 
                     className="w-full h-16 md:h-14 bg-zinc-100 hover:bg-white text-black font-black italic uppercase text-xs md:text-sm tracking-widest rounded-2xl shadow-xl transition-all active:scale-95"
-                    onClick={() => window.open('https://www.instagram.com/havertz.dxt/', '_blank')}
+                    onClick={() => window.open('https://www.instagram.com/havertz.offc/', '_blank')}
                   >
                     <ExternalLink className="mr-3 h-5 w-5" /> ENVIAR PELO INSTAGRAM
                   </Button>
@@ -536,7 +536,7 @@ Instagram: @havertz.dxt`;
                      </li>
                      <li className="flex items-start gap-3 text-xs text-zinc-200 font-black italic">
                        <span className="h-1.5 w-1.5 rounded-full bg-neon-green mt-1.5 shrink-0 shadow-[0_0_5px_#39FF14]" />
-                       Mande o print no IG @havertz.dxt
+                       Mande o print no IG @havertz.offc
                      </li>
                    </ul>
                 </div>
@@ -565,12 +565,12 @@ Instagram: @havertz.dxt`;
               Agora envie o comprovante do Pix pelo Instagram oficial informando o número do pedido.
             </p>
             <p className="text-[#E1306C] font-black text-sm uppercase tracking-widest mt-2">
-              Instagram: @havertz.dxt
+              Instagram: @havertz.offc
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-3 pt-4">
-            <Button variant="neon" size="lg" className="w-full font-black uppercase italic bg-[#E1306C] border-none hover:bg-[#C13584]" onClick={() => window.open('https://www.instagram.com/havertz.dxt/', '_blank')}>
+            <Button variant="neon" size="lg" className="w-full font-black uppercase italic bg-[#E1306C] border-none hover:bg-[#C13584]" onClick={() => window.open('https://www.instagram.com/havertz.offc/', '_blank')}>
               <ExternalLink className="mr-2 h-5 w-5" /> ABRIR INSTAGRAM
             </Button>
             <Button variant="outline" size="lg" className="w-full font-black uppercase italic border-zinc-800" onClick={() => navigate('/account/orders')}>

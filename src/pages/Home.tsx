@@ -55,7 +55,7 @@ export default function Home() {
     },
     {
       q: 'Como envio o comprovante?',
-      a: 'Apos finalizar o pedido no site, envie o comprovante do Pix pelo Instagram oficial (@havertz.dxt) informando o numero do pedido para validacao manual.'
+      a: 'Apos finalizar o pedido no site, envie o comprovante do Pix pelo Instagram oficial (@havertz.offc) informando o numero do pedido para validacao manual.'
     }
   ];
 

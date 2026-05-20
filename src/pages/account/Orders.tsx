@@ -244,7 +244,7 @@ export default function UserOrders() {
                                 {order.status === 'aguardando comprovante' && (
                                   <Button 
                                     className="w-full bg-zinc-100 hover:bg-white text-black font-black italic uppercase text-xs h-14 border-none shadow-xl transition-all active:scale-95"
-                                    onClick={() => window.open('https://www.instagram.com/havertz.dxt/', '_blank')}
+                                    onClick={() => window.open('https://www.instagram.com/havertz.offc/', '_blank')}
                                   >
                                     🚀 ENVIAR COMPROVANTE
                                   </Button>
