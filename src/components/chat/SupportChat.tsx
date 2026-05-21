@@ -73,6 +73,35 @@ export function SupportChat() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const conversationIdRef = useRef<string | null>(null);
 
+  const [timeLeft, setTimeLeft] = useState<{ hours: number; minutes: number; seconds: number; isExpired: boolean }>({
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+    isExpired: false
+  });
+
+  useEffect(() => {
+    const targetTime = new Date("2026-05-23T02:00:00.000Z").getTime(); // May 22, 23:00 UTC-3 / BRT (meia-noite / 11 horas de amanhã)
+    
+    const updateCountdown = () => {
+      const difference = targetTime - Date.now();
+      
+      if (difference <= 0) {
+        setTimeLeft({ hours: 0, minutes: 0, seconds: 0, isExpired: true });
+      } else {
+        const totalSeconds = Math.floor(difference / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        setTimeLeft({ hours, minutes, seconds, isExpired: false });
+      }
+    };
+    
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     const savedConvId = localStorage.getItem('havertz_chat_conv_id');
     if (savedConvId) {
@@ -462,6 +491,25 @@ export function SupportChat() {
                 </div>
               ) : (
                 <>
+                  {!timeLeft.isExpired && (
+                    <div className="bg-amber-500/10 border-b border-amber-500/20 px-5 py-3.5 flex items-center justify-between text-[10px] text-amber-500 font-bold italic uppercase tracking-wider relative z-20 shadow-[0_4px_12px_rgba(0,0,0,0.5)] shrink-0">
+                      <span className="flex items-center gap-2 animate-pulse">
+                        <span className="h-2 w-2 rounded-full bg-amber-500 shadow-[0_0_8px_#F59E0B]" />
+                        Netflix Grátis encerrando
+                      </span>
+                      <span>
+                        {String(timeLeft.hours).padStart(2, '0')}h : {String(timeLeft.minutes).padStart(2, '0')}m : {String(timeLeft.seconds).padStart(2, '0')}s
+                      </span>
+                    </div>
+                  )}
+                  {timeLeft.isExpired && (
+                    <div className="bg-red-500/10 border-b border-red-500/20 px-5 py-3 flex items-center justify-center text-[10px] text-red-500 font-bold italic uppercase tracking-wider relative z-20 shrink-0">
+                      <span className="flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                        Suporte Netflix Grátis permanentemente encerrado
+                      </span>
+                    </div>
+                  )}
                   <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide relative z-10">
                     <div className="flex flex-col items-center gap-2 mb-4">
                       <Badge variant="outline" className="text-[8px] border-zinc-900 text-zinc-600 tracking-[0.4em] font-black uppercase bg-zinc-950/80 px-4 py-1.5 rounded-full">
@@ -516,12 +564,17 @@ export function SupportChat() {
                       <div className="flex flex-col gap-3 pt-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="flex items-center justify-between px-1">
                           <p className="text-[10px] text-zinc-600 font-black uppercase tracking-[0.3em]">Menu de Ajuda</p>
-                          {new Date().getDate() <= NETFLIX_CONFIG.expireDay && (
+                          {!timeLeft.isExpired && new Date().getDate() <= NETFLIX_CONFIG.expireDay && (
                              <Badge variant="neon" className="text-[7px] animate-pulse">NOVO</Badge>
                           )}
                         </div>
                         <div className="grid grid-cols-2 gap-2">
-                          {BOT_OPTIONS.map(opt => (
+                          {BOT_OPTIONS.filter(opt => {
+                            if (timeLeft.isExpired && (opt.id === 'netflix_free' || opt.id === 'check_netflix_code')) {
+                              return false;
+                            }
+                            return true;
+                          }).map(opt => (
                             <button 
                               key={opt.id} 
                               onClick={() => handleSendMessage(undefined, opt.label)} 

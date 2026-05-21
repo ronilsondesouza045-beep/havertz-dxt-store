@@ -163,6 +163,14 @@ async function getLatestNetflixCode() {
 
 app.get("/api/netflix-code", async (req, res) => {
   try {
+    const SHUTDOWN_DEADLINE = new Date("2026-05-23T02:00:00.000Z").getTime();
+    if (Date.now() >= SHUTDOWN_DEADLINE) {
+      return res.status(403).json({
+        error: "Serviço Desativado.",
+        message: "A busca por códigos da Netflix grátis foi encerrada permanentemente conforme o cronograma de suspensão do suporte."
+      });
+    }
+
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({ error: "Identidade não confirmada.", message: "Você precisa estar logado para acessar o suporte Netflix." });

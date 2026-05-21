@@ -29,6 +29,11 @@ export function getPrimeVideoResponse() {
 export function getNetflixResponse(latestCode?: string | null, receivedAt?: string | null) {
   const now = new Date();
   const currentDay = now.getDate();
+  const SHUTDOWN_DEADLINE = new Date("2026-05-23T02:00:00.000Z").getTime();
+
+  if (Date.now() >= SHUTDOWN_DEADLINE) {
+    return '🎬 O suporte a Netflix gratuita e a busca de códigos automáticos foram desativados permanentemente em nosso sistema conforme programado.';
+  }
 
   if (currentDay > NETFLIX_CONFIG.expireDay) {
     return '🎬 A Netflix gratuita do momento já expirou. Aguarde uma nova liberação ou entre em contato pelo Instagram @havertz.offc.';
